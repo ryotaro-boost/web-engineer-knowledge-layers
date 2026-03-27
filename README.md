@@ -38,8 +38,8 @@ Layer 0: コンピュータサイエンス基礎
 ```
 ├── web-engineer-knowledge-layers.md   # 全体マップ（MOC）
 ├── _templates/                        # トピックテンプレート
+├── details/                           # 末端知識（個別概念の深掘り、レイヤー横断）
 ├── Layer0-CS基礎/                     # コンピュータサイエンス基礎
-│   └── details/                       # 末端知識（個別概念の深掘り）
 ├── Layer1-OSインフラ/                  # OS・インフラ
 ├── Layer2-ネットワーク/                # ネットワーク・プロトコル
 ├── Layer3-データ永続化/                # データ永続化
