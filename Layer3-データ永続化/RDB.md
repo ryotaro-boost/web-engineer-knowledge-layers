@@ -311,7 +311,7 @@ LIMIT 10;
 - **書籍**: 『達人に学ぶDB設計 徹底指南書』（ミック著） — 正規化とテーブル設計の実践的な指南
 - **書籍**: 『SQLアンチパターン』（Bill Karwin著） — 実務で陥りがちなDB設計の失敗パターン集
 - **公式ドキュメント**: [PostgreSQL Documentation](https://www.postgresql.org/docs/) — 最も詳細で正確なリファレンス
-- **公式ドキュメント**: [MySQL Reference Manual](https://dev.mysql.com/doc/refman/8.0/en/) — MySQL固有の挙動を確認する際に
+- **公式ドキュメント**: [MySQL Reference Manual](https://dev.mysql.com/doc/refman/8.4/en/) — MySQL固有の挙動を確認する際に
 - **記事**: [Use The Index, Luke](https://use-the-index-luke.com/) — SQLインデックスの解説に特化したサイト
 
 ## 学習メモ

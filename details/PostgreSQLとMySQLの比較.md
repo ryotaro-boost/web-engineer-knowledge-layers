@@ -312,9 +312,9 @@ func main() {
 INSERT INTO users (email, name) VALUES ('taro@example.com', '太郎')
 ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name;
 
--- MySQL: ON DUPLICATE KEY UPDATE
-INSERT INTO users (email, name) VALUES ('taro@example.com', '太郎')
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+-- MySQL: ON DUPLICATE KEY UPDATE（8.0.20+ のエイリアス構文）
+INSERT INTO users (email, name) VALUES ('taro@example.com', '太郎') AS new
+ON DUPLICATE KEY UPDATE name = new.name;
 
 -- ============================
 -- RETURNING（INSERT/UPDATE結果の取得）
@@ -461,5 +461,5 @@ flowchart TD
 ## 参考リソース
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/) — 公式ドキュメント
-- [MySQL Reference Manual](https://dev.mysql.com/doc/refman/8.0/en/) — 公式ドキュメント
+- [MySQL Reference Manual](https://dev.mysql.com/doc/refman/8.4/en/) — 公式ドキュメント
 - 『詳解 PostgreSQL』（Robert Haas 他） — MVCC、VACUUM、プランナの内部動作を解説
