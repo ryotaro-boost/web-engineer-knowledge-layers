@@ -319,5 +319,5 @@ resource "aws_route53_record" "api" {
 
 - DNS over HTTPS（DoH）/ DNS over TLS（DoT）によるプライバシー保護は[[TLS-SSL]]と合わせて理解する
 - DNSSEC（DNS Security Extensions）の詳細は[[TLS-SSL]]との関連でセキュリティ観点から深掘り候補
-- Kubernetes内部DNS（CoreDNS）によるサービスディスカバリは[[コンテナ技術]]の実運用知識として重要
+- Kubernetes内部DNS（CoreDNS）によるサービスディスカバリは[[Docker]]の実運用知識として重要
 - DNSラウンドロビンの限界と、Route 53のヘルスチェック連動は[[ロードバランシング]]で扱う
