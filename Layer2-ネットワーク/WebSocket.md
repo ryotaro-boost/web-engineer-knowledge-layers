@@ -335,6 +335,85 @@ async def main():
 asyncio.run(main())
 ```
 
+### WebSocketサーバー（Go + gorilla/websocket）
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return r.Header.Get("Origin") == "https://myapp.example.com"
+	},
+}
+
+var (
+	clients = make(map[*websocket.Conn]bool)
+	mu      sync.Mutex
+)
+
+type Message struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+func handleWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Upgrade失敗:", err)
+		return
+	}
+	defer conn.Close()
+
+	mu.Lock()
+	clients[conn] = true
+	mu.Unlock()
+
+	defer func() {
+		mu.Lock()
+		delete(clients, conn)
+		mu.Unlock()
+	}()
+
+	for {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
+			break
+		}
+
+		var msg Message
+		if err := json.Unmarshal(raw, &msg); err != nil {
+			conn.WriteJSON(Message{Type: "error"})
+			continue
+		}
+
+		if msg.Type == "chat.message" {
+			mu.Lock()
+			for c := range clients {
+				if c != conn {
+					c.WriteMessage(websocket.TextMessage, raw)
+				}
+			}
+			mu.Unlock()
+		}
+	}
+}
+
+func main() {
+	http.HandleFunc("/ws", handleWS)
+	log.Println("Listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
 ## WebSocketハンドシェイクの詳細
 
 WebSocket接続はHTTPアップグレードリクエストから始まる：
