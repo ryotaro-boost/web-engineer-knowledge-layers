@@ -19,7 +19,7 @@ block-beta
   SRC["送信元ポート"]:2 DST["宛先ポート"]:2
   SEQ["シーケンス番号（32bit）"]:4
   ACKN["確認応答番号（32bit）"]:4
-  OFS["データ\nオフセット"] RSV["予約"] FLAGS["⚑ フラグ（6bit）"]:1 WIN["ウィンドウサイズ"]:1
+  OFS["データ<br/>オフセット"] RSV["予約"] FLAGS["⚑ フラグ（6bit）"]:1 WIN["ウィンドウサイズ"]:1
   CHK["チェックサム"]:2 URP["緊急ポインタ"]:2
 
   style FLAGS fill:#ff9800,color:#fff,stroke:#e65100
@@ -30,7 +30,7 @@ block-beta
 ```mermaid
 block-beta
   columns 6
-  URG["URG\n緊急"] ACK["ACK\n確認応答"] PSH["PSH\n即時転送"] RST["RST\nリセット"] SYN["SYN\n接続開始"] FIN["FIN\n接続終了"]
+  URG["URG<br/>緊急"] ACK["ACK<br/>確認応答"] PSH["PSH<br/>即時転送"] RST["RST<br/>リセット"] SYN["SYN<br/>接続開始"] FIN["FIN<br/>接続終了"]
 
   style URG fill:#e0e0e0,color:#666
   style ACK fill:#2196f3,color:#fff

@@ -215,13 +215,13 @@ const result2 = await pool.query(
 
 ```mermaid
 flowchart TB
-    XSS["XSS"] --> Stored["① Stored XSS\n(永続型)"]
-    XSS --> Reflected["② Reflected XSS\n(反射型)"]
-    XSS --> DOM["③ DOM-based XSS\n(DOM型)"]
+    XSS["XSS"] --> Stored["① Stored XSS<br/>(永続型)"]
+    XSS --> Reflected["② Reflected XSS<br/>(反射型)"]
+    XSS --> DOM["③ DOM-based XSS<br/>(DOM型)"]
 
-    Stored --> S1["攻撃コードがDBに保存される\n例: 掲示板の投稿、プロフィール"]
-    Reflected --> R1["攻撃コードがURLに含まれ\nサーバーがそのまま反射する\n例: 検索結果ページ"]
-    DOM --> D1["サーバーを経由せず\nJavaScriptがDOMを操作する際に発生\n例: location.hashの直接埋め込み"]
+    Stored --> S1["攻撃コードがDBに保存される<br/>例: 掲示板の投稿、プロフィール"]
+    Reflected --> R1["攻撃コードがURLに含まれ<br/>サーバーがそのまま反射する<br/>例: 検索結果ページ"]
+    DOM --> D1["サーバーを経由せず<br/>JavaScriptがDOMを操作する際に発生<br/>例: location.hashの直接埋め込み"]
 ```
 
 | 類型 | 攻撃コードの格納先 | 影響範囲 | 危険度 |
@@ -322,11 +322,11 @@ const safeHref = /^https?:\/\//.test(userInput) ? userInput : '#';
 
 ```mermaid
 flowchart LR
-    Input["入力"] --> V["① バリデーション\n(補助的防御)"]
+    Input["入力"] --> V["① バリデーション<br/>(補助的防御)"]
     V --> Logic["ビジネスロジック"]
-    Logic --> DB["② プリペアドステートメント\n(SQLiの構造的防御)"]
-    Logic --> HTML["③ 出力時エスケープ\n(XSSの構造的防御)"]
-    Logic --> CSP["④ CSP\n(XSSの追加防御)"]
+    Logic --> DB["② プリペアドステートメント<br/>(SQLiの構造的防御)"]
+    Logic --> HTML["③ 出力時エスケープ<br/>(XSSの構造的防御)"]
+    Logic --> CSP["④ CSP<br/>(XSSの追加防御)"]
 ```
 
 | 防御層 | SQLi | XSS |

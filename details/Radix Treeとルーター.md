@@ -138,7 +138,7 @@ flowchart LR
     B -->|"'/api/' にマッチ"| C["ノード: '/api/'"]
     C -->|"'users' にマッチ"| D["ノード: 'users'"]
     D -->|"'/42' → パラメータ :id=42"| E["ノード: '/:id'"]
-    E -->|"'/posts' にマッチ"| F["ノード: '/posts'\nハンドラ発見"]
+    E -->|"'/posts' にマッチ"| F["ノード: '/posts'<br/>ハンドラ発見"]
 
     style F fill:#4caf50,color:#fff
 ```
