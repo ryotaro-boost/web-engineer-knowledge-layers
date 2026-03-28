@@ -116,17 +116,28 @@ UTF-16: "Hello" → [0x00,0x48, 0x00,0x65, 0x00,0x6C, ...]   （10バイト、NU
 
 ASCII は128文字しか持たないため、英語以外の言語を扱えない。この制約に対して各国・各ベンダーが独自の拡張を行い、文字コードの混乱が始まった:
 
-```
-ASCII（7ビット、128文字）
-  ├─ ISO-8859-1（Latin-1）  … 西欧言語（8ビット拡張）
-  ├─ ISO-8859-15（Latin-9） … ユーロ記号 € を追加
-  ├─ Windows-1252           … ISO-8859-1 の Microsoft 拡張
-  ├─ Shift_JIS              … 日本語（ASCII + JIS X 0208）
-  ├─ EUC-JP                 … 日本語（Unix 向け）
-  ├─ GB2312 / GBK           … 中国語（簡体字）
-  ├─ Big5                   … 中国語（繁体字）
-  ├─ EUC-KR                 … 韓国語
-  └─ ...数十種類の独自規格
+```mermaid
+graph TD
+    ASCII["ASCII<br/>7ビット、128文字"]
+    Latin1["ISO-8859-1 (Latin-1)<br/>西欧言語（8ビット拡張）"]
+    Latin9["ISO-8859-15 (Latin-9)<br/>ユーロ記号 € を追加"]
+    Win1252["Windows-1252<br/>ISO-8859-1 の Microsoft 拡張"]
+    SJIS["Shift_JIS<br/>日本語（ASCII + JIS X 0208）"]
+    EUCJP["EUC-JP<br/>日本語（Unix 向け）"]
+    GB["GB2312 / GBK<br/>中国語（簡体字）"]
+    Big5["Big5<br/>中国語（繁体字）"]
+    EUCKR["EUC-KR<br/>韓国語"]
+    Other["...数十種類の独自規格"]
+
+    ASCII --> Latin1
+    ASCII --> Latin9
+    ASCII --> Win1252
+    ASCII --> SJIS
+    ASCII --> EUCJP
+    ASCII --> GB
+    ASCII --> Big5
+    ASCII --> EUCKR
+    ASCII --> Other
 ```
 
 これらはすべて ASCII の 0x00〜0x7F 部分は共通だが、0x80 以上のバイトの解釈がバラバラだった。この混乱を統一するために Unicode と UTF-8 が生まれた（→ [[文字コード-UTF8]]）。
