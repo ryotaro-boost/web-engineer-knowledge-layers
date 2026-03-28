@@ -16,7 +16,7 @@ created: 2026-03-28
 ```mermaid
 graph TD
     T1A["Tier 1 ISP<br/>（NTT Communications, Lumen, etc.）"]
-    T1B["Tier 1 ISP<br/>（Telia, Arelion, etc.）"]
+    T1B["Tier 1 ISP<br/>（Arelion, Zayo, etc.）"]
     T2A["Tier 2 ISP<br/>（地域大手プロバイダ）"]
     T2B["Tier 2 ISP<br/>（地域大手プロバイダ）"]
     T3A["Tier 3 ISP<br/>（地域・小規模プロバイダ）"]
@@ -45,7 +45,7 @@ graph TD
 - インターネットのバックボーン（幹線ネットワーク）を運用する大規模ISP
 - 他のTier 1 ISPと**ピアリング（Peering）**で対等に接続し、トランジット料金を支払わずにトラフィックを交換する
 - 世界中のどこにでもパケットを到達させられる「フルルート」を持つ
-- 例: NTT Communications（AS2914）、Lumen Technologies、Telia Carrier
+- 例: NTT Communications（AS2914）、Lumen Technologies、Arelion（旧 Telia Carrier、AS1299）
 
 ### Tier 2 — 地域大手
 

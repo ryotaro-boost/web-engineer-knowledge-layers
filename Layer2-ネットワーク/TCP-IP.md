@@ -55,8 +55,8 @@ graph TB
     subgraph "TCP/IPモデル"
         A["アプリケーション層<br/>HTTP, DNS, SMTP, WebSocket"]
         B["トランスポート層<br/>TCP, UDP"]
-        C["インターネット層<br/>IP, ICMP, ARP"]
-        D["ネットワークインターフェース層<br/>Ethernet, Wi-Fi"]
+        C["インターネット層<br/>IP, ICMP"]
+        D["ネットワークインターフェース層<br/>Ethernet, Wi-Fi, ARP"]
     end
     A --> B --> C --> D
 
