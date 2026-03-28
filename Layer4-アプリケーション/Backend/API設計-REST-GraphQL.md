@@ -63,7 +63,7 @@ flowchart LR
         R2 --> R3["GET /posts/1/comments"]
     end
     subgraph GQL["GraphQL: 1回のリクエスト"]
-        G1["POST /graphql\n{ user(id:42) {\n  name\n  posts { title comments { body } }\n} }"]
+        G1["POST /graphql<br/>{ user(id:42) {<br/>  name<br/>  posts { title comments { body } }<br/>} }"]
     end
 ```
 
@@ -88,7 +88,7 @@ graph TD
 | ファイルアップロード | 標準的（multipart） | 仕様外（別途対応が必要） |
 | エラーハンドリング | HTTPステータスコードで表現 | 常に200を返し、`errors`フィールドで表現 |
 | リアルタイム | [[WebSocket]]等を別途実装 | Subscription で統合的に対応 |
-| ツールエコシステム | 成熟（OpenAPI/Swagger） | 成長中（GraphiQL, Apollo Studio） |
+| ツールエコシステム | 成熟（[[OpenAPIとスキーマ駆動開発|OpenAPI/Swagger]]） | 成長中（GraphiQL, Apollo Studio） |
 
 ## 他の仕組みとどう関係するか
 
@@ -131,7 +131,7 @@ graph TD
 - **リソースは名詞で、操作はHTTPメソッドで表現する** — `POST /sendEmail` ではなく `POST /emails`。動詞をURLに含めない
 - **コレクションとアイテムを区別する** — `GET /users`（一覧）vs `GET /users/42`（個別）
 - **適切なステータスコードを返す** — 200（成功）、201（作成）、204（内容なし）、400（不正リクエスト）、401（未認証）、403（権限なし）、404（未検出）、409（競合）、422（処理不能）
-- **ページネーションを最初から設計する** — コレクションは必ずページネーション対応にする。`?page=2&per_page=20` または カーソルベース `?cursor=xxx&limit=20`
+- **ページネーションを最初から設計する** — コレクションは必ずページネーション対応にする。`?page=2&per_page=20` または [[カーソルベースページネーション|カーソルベース]] `?cursor=xxx&limit=20`
 - **バージョニング戦略を決める** — URLパス（`/v1/users`）、ヘッダ（`Accept: application/vnd.api.v1+json`）、クエリパラメータ（`?version=1`）のいずれか。URLパスが最もシンプルで広く使われる
 
 ### GraphQL設計の原則
@@ -421,6 +421,211 @@ func (s *UserStore) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 }
+```
+
+### Laravel（PHP）— RESTful API Resource Controller
+
+```php
+// routes/api.php — 宣言的ルーティング
+// 1行で GET/POST/PUT/DELETE の5つのルートが生成される
+use App\Http\Controllers\UserController;
+
+Route::apiResource('users', UserController::class);
+// 生成されるルート:
+// GET    /api/users          → index
+// POST   /api/users          → store
+// GET    /api/users/{user}   → show
+// PUT    /api/users/{user}   → update
+// DELETE /api/users/{user}   → destroy
+```
+
+```php
+// app/Http/Resources/UserResource.php — API Resourceでレスポンス変換
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class UserResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'id'    => $this->id,
+            'name'  => $this->name,
+            'email' => $this->email,
+            // DBカラム名をそのまま露出せず、APIの契約として整形する
+            'created_at' => $this->created_at->toIso8601String(),
+        ];
+    }
+}
+```
+
+```php
+// app/Http/Controllers/UserController.php — Resource Controller
+namespace App\Http\Controllers;
+
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\Request;
+
+class UserController extends Controller
+{
+    // GET /api/users — 一覧（ページネーション付き）
+    public function index()
+    {
+        // paginate() で自動的に page, per_page パラメータに対応
+        return UserResource::collection(User::paginate(15));
+    }
+
+    // GET /api/users/{user} — 詳細（Route Model Binding で自動取得）
+    public function show(User $user)
+    {
+        return new UserResource($user);
+    }
+
+    // POST /api/users — 作成
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+        ]);
+
+        $user = User::create($validated);
+
+        return (new UserResource($user))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    // PUT /api/users/{user} — 完全置き換え
+    public function update(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+        ]);
+
+        $user->update($validated);
+
+        return new UserResource($user);
+    }
+
+    // DELETE /api/users/{user} — 削除
+    public function destroy(User $user)
+    {
+        $user->delete();
+
+        return response()->noContent(); // 204
+    }
+}
+```
+
+### Ruby on Rails — RESTful API
+
+```ruby
+# config/routes.rb — resources ルーティング
+Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      resources :users, only: [:index, :show, :create, :update, :destroy]
+      # 生成されるルート:
+      # GET    /api/v1/users          → api/v1/users#index
+      # POST   /api/v1/users          → api/v1/users#create
+      # GET    /api/v1/users/:id      → api/v1/users#show
+      # PATCH  /api/v1/users/:id      → api/v1/users#update
+      # DELETE /api/v1/users/:id      → api/v1/users#destroy
+    end
+  end
+end
+```
+
+```ruby
+# app/controllers/api/v1/users_controller.rb — API モードコントローラ
+module Api
+  module V1
+    class UsersController < ApplicationController
+      before_action :set_user, only: [:show, :update, :destroy]
+
+      # GET /api/v1/users — 一覧（ページネーション付き）
+      def index
+        users = User.page(params[:page]).per(params[:per_page] || 15)
+        render json: users, each_serializer: UserSerializer,
+               meta: { total: User.count, page: users.current_page }
+      end
+
+      # GET /api/v1/users/:id — 詳細
+      def show
+        render json: @user, serializer: UserSerializer
+      end
+
+      # POST /api/v1/users — 作成
+      def create
+        user = User.new(user_params)
+        if user.save
+          render json: user, serializer: UserSerializer, status: :created
+        else
+          render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
+      # PUT/PATCH /api/v1/users/:id — 更新
+      def update
+        if @user.update(user_params)
+          render json: @user, serializer: UserSerializer
+        else
+          render json: { errors: @user.errors.full_messages }, status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /api/v1/users/:id — 削除
+      def destroy
+        @user.destroy
+        head :no_content  # 204
+      end
+
+      private
+
+      def set_user
+        @user = User.find(params[:id])
+      end
+
+      def user_params
+        params.require(:user).permit(:name, :email)
+      end
+    end
+  end
+end
+```
+
+```ruby
+# app/serializers/user_serializer.rb — レスポンス整形
+# ActiveModel::Serializer を利用（gem 'active_model_serializers'）
+class UserSerializer < ActiveModel::Serializer
+  attributes :id, :name, :email, :created_at
+
+  # DBカラムをそのまま露出せず、API契約として整形する
+  def created_at
+    object.created_at.iso8601
+  end
+end
+```
+
+```ruby
+# jbuilder を使う場合のレスポンス例（gem 'jbuilder'）
+# app/views/api/v1/users/show.json.jbuilder
+json.extract! @user, :id, :name, :email
+json.created_at @user.created_at.iso8601
+
+# app/views/api/v1/users/index.json.jbuilder
+json.data @users do |user|
+  json.extract! user, :id, :name, :email
+  json.created_at user.created_at.iso8601
+end
+json.meta do
+  json.total @users.total_count
+  json.page  @users.current_page
+end
 ```
 
 ## 参考リソース
