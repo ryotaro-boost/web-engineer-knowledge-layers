@@ -1,8 +1,8 @@
 # Obsidian
 .obsidian/
 
-# Claude Code
-.claude/
+# Claude Code — 個人設定のみ除外、コマンドは共有
+.claude/settings.local.json
 
 # OS
 .DS_Store
