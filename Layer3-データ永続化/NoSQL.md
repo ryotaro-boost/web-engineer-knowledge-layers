@@ -1,7 +1,7 @@
 ---
 layer: 3
 topic: NoSQL
-status: 🟡 学習中
+status: 🔴 未着手
 created: 2026-03-28
 ---
 

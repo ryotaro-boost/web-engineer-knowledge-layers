@@ -1,7 +1,7 @@
 ---
 layer: 6
 topic: SQLインジェクション
-status: 🟡 学習中
+status: 🔴 未着手
 created: 2026-03-30
 ---
 

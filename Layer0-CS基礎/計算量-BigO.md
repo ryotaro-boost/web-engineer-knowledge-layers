@@ -1,7 +1,7 @@
 ---
 layer: 0
 topic: 計算量（Big-O）
-status: 🟡 学習中
+status: 🔴 未着手
 created: 2026-03-27
 ---
 

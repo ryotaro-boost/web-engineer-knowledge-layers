@@ -1,7 +1,7 @@
 ---
 layer: 4
 topic: HTML/CSS/JSの本質
-status: 🟡 学習中
+status: 🔴 未着手
 created: 2026-03-29
 ---
 

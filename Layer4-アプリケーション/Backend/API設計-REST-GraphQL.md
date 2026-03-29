@@ -1,7 +1,7 @@
 ---
 layer: 4
 topic: API設計（REST / GraphQL）
-status: 🟡 学習中
+status: 🔴 未着手
 created: 2026-03-28
 ---
 
