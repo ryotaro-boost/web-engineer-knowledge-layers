@@ -112,7 +112,8 @@ sequenceDiagram
 ### Express（Node.js）— CORSミドルウェアの実装
 
 ```javascript
-const express = require('express');
+import express from 'express';
+
 const app = express();
 
 // 許可するオリジンのリスト
@@ -129,6 +130,7 @@ function cors(req, res, next) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
+    res.setHeader('Vary', 'Origin');
   }
 
   // プリフライトリクエストへの応答
