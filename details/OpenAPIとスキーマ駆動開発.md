@@ -1,4 +1,5 @@
 ---
+layer: 4
 parent: "[[API設計-REST-GraphQL]]"
 type: detail
 created: 2026-03-28
