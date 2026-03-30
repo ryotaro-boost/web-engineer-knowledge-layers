@@ -34,7 +34,7 @@ FROM node:20-slim
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 COPY . .
 
 EXPOSE 3000
@@ -105,7 +105,7 @@ COPY . .                   # レイヤー4: アプリコード（頻繁に変更
 
 **課題:** 実際のアプリケーションはWebサーバー + DB + キャッシュなど複数のサービスで構成される。これらの起動・接続・停止を一括管理したい。
 
-**解決:** Docker Composeは複数コンテナの構成を `docker-compose.yml` で宣言的に定義する。
+**解決:** Docker Composeは複数コンテナの構成を `compose.yaml`（Compose V2 推奨。`docker-compose.yml` も後方互換で動作する）で宣言的に定義する。
 
 ```yaml
 # docker-compose.yml

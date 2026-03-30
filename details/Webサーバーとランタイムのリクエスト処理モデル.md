@@ -1,4 +1,5 @@
 ---
+layer: 1
 parent: "[[プロセスとスレッド]]"
 type: detail
 created: 2026-03-27
