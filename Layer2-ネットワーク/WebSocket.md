@@ -335,6 +335,116 @@ async def main():
 asyncio.run(main())
 ```
 
+### WebSocketサーバー（PHP + Ratchet）
+
+```php
+<?php
+// composer require cboden/ratchet
+use Ratchet\MessageComponentInterface;
+use Ratchet\ConnectionInterface;
+use Ratchet\Server\IoServer;
+use Ratchet\Http\HttpServer;
+use Ratchet\WebSocket\WsServer;
+
+class ChatServer implements MessageComponentInterface {
+    protected \SplObjectStorage $clients;
+
+    public function __construct() {
+        $this->clients = new \SplObjectStorage();
+    }
+
+    public function onOpen(ConnectionInterface $conn): void {
+        // Origin検証
+        $origin = $conn->httpRequest->getHeader('Origin')[0] ?? '';
+        if ($origin !== 'https://myapp.example.com') {
+            $conn->close();
+            return;
+        }
+        $this->clients->attach($conn);
+    }
+
+    public function onMessage(ConnectionInterface $from, $msg): void {
+        $data = json_decode($msg, true);
+        if ($data === null) {
+            $from->send(json_encode(['type' => 'error', 'message' => 'Invalid JSON']));
+            return;
+        }
+
+        if (($data['type'] ?? '') === 'chat.message') {
+            foreach ($this->clients as $client) {
+                if ($client !== $from) {
+                    $client->send($msg);
+                }
+            }
+        }
+    }
+
+    public function onClose(ConnectionInterface $conn): void {
+        $this->clients->detach($conn);
+    }
+
+    public function onError(ConnectionInterface $conn, \Exception $e): void {
+        $conn->close();
+    }
+}
+
+$server = IoServer::factory(
+    new HttpServer(new WsServer(new ChatServer())),
+    8080
+);
+$server->run();
+```
+
+### WebSocketサーバー（Ruby + faye-websocket）
+
+```ruby
+# Gemfile: gem 'faye-websocket', gem 'thin'
+require 'faye/websocket'
+require 'json'
+
+CLIENTS = Set.new
+ALLOWED_ORIGIN = 'https://myapp.example.com'
+
+App = lambda do |env|
+  if Faye::WebSocket.websocket?(env)
+    ws = Faye::WebSocket.new(env)
+
+    # Origin検証
+    origin = env['HTTP_ORIGIN'] || ''
+    unless origin == ALLOWED_ORIGIN
+      ws.close(1008, 'Origin not allowed')
+      return ws.rack_response
+    end
+
+    ws.on :open do |_event|
+      CLIENTS.add(ws)
+    end
+
+    ws.on :message do |event|
+      msg = JSON.parse(event.data) rescue nil
+      unless msg
+        ws.send(JSON.generate(type: 'error', message: 'Invalid JSON'))
+        next
+      end
+
+      if msg['type'] == 'chat.message'
+        CLIENTS.each do |client|
+          client.send(event.data) unless client == ws
+        end
+      end
+    end
+
+    ws.on :close do |_event|
+      CLIENTS.delete(ws)
+    end
+
+    ws.rack_response
+  else
+    [200, { 'Content-Type' => 'text/plain' }, ['Not a WebSocket request']]
+  end
+end
+```
+
 ### WebSocketサーバー（Go + gorilla/websocket）
 
 ```go
