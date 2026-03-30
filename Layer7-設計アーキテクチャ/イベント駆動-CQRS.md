@@ -176,7 +176,10 @@ interface CreateOrderCommand {
 }
 
 class OrderCommandService {
-  constructor(private orderRepo: OrderRepository) {}
+  constructor(
+    private orderRepo: OrderRepository,
+    private eventBus: EventBus,
+  ) {}
 
   async createOrder(cmd: CreateOrderCommand): Promise<string> {
     // ビジネスルールの検証
@@ -295,10 +298,16 @@ class PointsEventHandler {
 
 ```typescript
 // 同じイベントが2回配信されても安全
+// 実務では processedEvents は Redis や DB で実装する（プロセス再起動で消えないように）
+interface ProcessedEventStore {
+  has(id: string): Promise<boolean>;
+  add(id: string): Promise<void>;
+}
+
 class PaymentEventHandler {
   constructor(
     private paymentRepo: PaymentRepository,
-    private processedEvents: Set<string>, // 処理済みイベントIDを記録
+    private processedEvents: ProcessedEventStore,
   ) {}
 
   async handle(event: OrderPlacedEvent) {
