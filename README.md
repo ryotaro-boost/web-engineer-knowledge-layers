@@ -73,3 +73,4 @@ Phase 1〜4の段階的学習。下位レイヤーから積み上げ、依存関
 | `/study-topic` | トピックドキュメントを生成 | `/study-topic Layer0 データ構造とアルゴリズム` |
 | `/create-detail` | 末端知識ドキュメント（details/）を生成。内容指定から最適なファイル名・構成に変換される | `/create-detail データ構造とアルゴリズム スタック` |
 | `/review-layer` | レイヤー内の全ドキュメントを事実誤り・最新性・補足情報の観点でレビュー | `/review-layer Layer0` |
+| `/review-detail` | 末端知識ドキュメント単体を正確性・最新性・品質・構造の観点でレビュー | `/review-detail CORS` |
