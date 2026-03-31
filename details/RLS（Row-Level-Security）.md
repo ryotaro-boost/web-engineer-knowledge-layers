@@ -186,7 +186,7 @@ func getOrders(ctx context.Context, pool *pgxpool.Pool, tenantID int64) ([]Order
 
 ## Supabase での活用
 
-Supabase は PostgreSQL の RLS を認証・認可の中核として利用している。JWT 内のクレームをポリシーで参照することで、バックエンドサーバーなしでもセキュアなデータアクセスが可能になる。
+Supabase は PostgreSQL の RLS を認証・認可の中核として利用している。[[SupabaseのJWT-RLS連携]]で詳しく解説するが、JWT 内のクレームをポリシーで参照することで、バックエンドサーバーなしでもセキュアなデータアクセスが可能になる。
 
 ```sql
 -- Supabase での典型的な RLS ポリシー
