@@ -120,7 +120,7 @@ PostgreSQLのデフォルトは READ COMMITTED、MySQLのデフォルトは REPE
 
 - **上位レイヤーとの関係:**
   - [[Layer4-アプリケーション/_index|Layer 4: アプリケーション]] — ORM（Object-Relational Mapping）を介してアプリケーションコードからRDBにアクセスする
-  - [[Layer6-セキュリティ/_index|Layer 6: セキュリティ]] — SQLインジェクションはRDBを使うアプリケーションの代表的な脆弱性
+  - [[Layer6-セキュリティ/_index|Layer 6: セキュリティ]] — SQLインジェクションはRDBを使うアプリケーションの代表的な脆弱性。マルチテナント環境では[[RLS（Row-Level-Security）]]によるDB層でのアクセス制御が有効
   - [[Layer7-設計アーキテクチャ/_index|Layer 7: 設計・アーキテクチャ]] — ドメインモデルとテーブル設計の対応関係
 
 ```mermaid
