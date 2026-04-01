@@ -9,6 +9,145 @@ created: 2026-03-31
 
 > **一言で言うと:** Stripe は決済インフラを API として提供するプラットフォームで、SaaS アプリケーションのサブスクリプション課金を「Checkout Session の作成 → Webhook でのイベント受信 → Customer Portal での自己管理」という3つの統合ポイントで実現する。開発者はカード情報を一切扱わずに、定額・従量・階段型など多様な課金モデルを実装できる。
 
+## 導入手順
+
+Stripe を SaaS アプリケーションに統合するまでの手順を示す。
+
+### 1. Stripe アカウントの作成と初期設定
+
+1. [Stripe Dashboard](https://dashboard.stripe.com/register) でアカウントを作成する
+2. メールアドレスの確認と本人確認（KYC）を完了する
+3. Dashboard の「開発者」→「API キー」から、テスト用・本番用のキーを確認する
+
+| キー | プレフィックス | 用途 |
+|------|--------------|------|
+| 公開可能キー（Publishable Key） | `pk_test_` / `pk_live_` | クライアントサイド（ブラウザ）で使用 |
+| シークレットキー（Secret Key） | `sk_test_` / `sk_live_` | サーバーサイドでのみ使用。**絶対に公開しない** |
+
+### 2. 環境変数の設定
+
+API キーはソースコードにハードコードせず、環境変数で管理する。
+
+```bash
+# .env（.gitignore に必ず追加すること）
+STRIPE_SECRET_KEY=sk_test_<your-secret-key>
+STRIPE_PUBLISHABLE_KEY=pk_test_<your-publishable-key>
+STRIPE_WEBHOOK_SECRET=whsec_<your-webhook-secret>
+APP_URL=http://localhost:3000
+```
+
+`STRIPE_WEBHOOK_SECRET` は Webhook エンドポイント登録後に発行される（後述の手順 5 で設定）。
+
+### 3. SDK のインストール
+
+Stripe は主要言語向けに公式 SDK を提供している。SDK 経由で API を呼び出すのが推奨される方法で、認証ヘッダの付与・リトライ・型定義が自動で処理される。
+
+```bash
+# Node.js / TypeScript
+npm install stripe
+
+# Go
+go get github.com/stripe/stripe-go/v85
+
+# Python
+pip install stripe
+
+# Ruby
+gem install stripe
+```
+
+### 4. Stripe クライアントの初期化と API 呼び出し
+
+SDK をインポートし、シークレットキーでクライアントを初期化する。以降はこのクライアント経由で全ての API 呼び出しを行う。
+
+**TypeScript:**
+
+```typescript
+import Stripe from 'stripe';
+
+// シークレットキーでクライアントを初期化（サーバーサイドのみ）
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+// クライアント経由で API を呼び出す
+const product = await stripe.products.create({
+  name: 'Pro プラン',
+  description: 'すべての機能が使える有料プラン',
+});
+
+const price = await stripe.prices.create({
+  product: product.id,
+  unit_amount: 2980,       // ¥2,980（JPY はゼロデシマル通貨なのでそのまま）
+  currency: 'jpy',
+  recurring: { interval: 'month' },
+});
+```
+
+**Go:**
+
+```go
+import (
+    "github.com/stripe/stripe-go/v85"
+    "github.com/stripe/stripe-go/v85/product"
+    "github.com/stripe/stripe-go/v85/price"
+)
+
+// グローバルキーを設定（init や main で1回だけ実行）
+stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+
+// Product の作成
+p, _ := product.New(&stripe.ProductParams{
+    Name:        stripe.String("Pro プラン"),
+    Description: stripe.String("すべての機能が使える有料プラン"),
+})
+
+// Price の作成
+pr, _ := price.New(&stripe.PriceParams{
+    Product:    stripe.String(p.ID),
+    UnitAmount: stripe.Int64(2980),
+    Currency:   stripe.String(string(stripe.CurrencyJPY)),
+    Recurring:  &stripe.PriceRecurringParams{
+        Interval: stripe.String(string(stripe.PriceRecurringIntervalMonth)),
+    },
+})
+```
+
+> **Product と Price は Dashboard の GUI からも作成できる。** コードで作成するのは動的に商品を生成する場合や、Infrastructure as Code で管理したい場合に有効。
+
+### 5. Webhook エンドポイントの登録
+
+Stripe からの非同期イベント通知を受け取るため、Webhook エンドポイントを登録する。
+
+1. **ローカル開発時:** Stripe CLI を使ってローカルサーバーに転送する
+   ```bash
+   # Stripe CLI のインストール（macOS）
+   brew install stripe/stripe-cli/stripe
+
+   # ログイン
+   stripe login
+
+   # ローカルに Webhook を転送（表示される whsec_... を環境変数に設定）
+   stripe listen --forward-to localhost:3000/webhooks/stripe
+   ```
+2. **本番環境:** Dashboard の「開発者」→「Webhooks」→「エンドポイントを追加」から URL を登録し、受信するイベントを選択する。発行される `whsec_...` を `STRIPE_WEBHOOK_SECRET` に設定する
+
+### 6. Product と Price の作成
+
+Dashboard または API で商品と価格を作成する（手順 4 のコード例を参照）。作成後に得られる `price_id`（`price_...`）を Checkout Session 作成時に使用する。
+
+### 導入手順の全体フロー
+
+```mermaid
+flowchart TD
+    A[1. Stripe アカウント作成] --> B[2. API キーを環境変数に設定]
+    B --> C[3. SDK インストール]
+    C --> D[4. クライアント初期化 + Product/Price 作成]
+    D --> E[5. Webhook エンドポイント登録]
+    E --> F[6. Checkout Session 作成の実装]
+    F --> G[7. Webhook ハンドラの実装]
+    G --> H[Stripe CLI でローカルテスト]
+    H --> I[本番デプロイ + 本番キーに切替]
+```
+
 ## Stripe の全体像
 
 Stripe は「決済のための REST API」として設計されている。SaaS 開発者が主に利用するのは以下の機能群:
@@ -281,8 +420,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/stripe/stripe-go/v84"
-	"github.com/stripe/stripe-go/v84/webhook"
+	"github.com/stripe/stripe-go/v85"
+	"github.com/stripe/stripe-go/v85/webhook"
 )
 
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
@@ -363,8 +502,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/stripe/stripe-go/v84"
-	"github.com/stripe/stripe-go/v84/checkout/session"
+	"github.com/stripe/stripe-go/v85"
+	"github.com/stripe/stripe-go/v85/checkout/session"
 )
 
 type CheckoutRequest struct {
@@ -453,8 +592,8 @@ async function handleWebhookEvent(event: Stripe.Event) {
 | 条件 | Stripe の動作 |
 |------|--------------|
 | エンドポイントが 2xx を返す | 成功。リトライなし |
-| 2xx 以外のレスポンス | 本番環境では最大**3日間**、指数バックオフでリトライ（サンドボックスでは数時間以内に3回） |
-| 接続タイムアウト | 速やかに（数秒以内が推奨）レスポンスを返さないとタイムアウト扱い |
+| 2xx 以外のレスポンス | 本番環境では最大**16回**、約**3日間**にわたり指数バックオフでリトライ（サンドボックスでは数時間以内に3回） |
+| 接続タイムアウト | **20秒以内**にレスポンスを返さないとタイムアウト扱い。実務では即座に 200 を返し非同期処理する |
 | エンドポイントが連続失敗 | Stripe Dashboard で警告、最終的に Webhook が無効化される |
 
 **重要:** 重い処理（メール送信、外部 API 呼び出し等）は Webhook ハンドラ内で直接実行せず、メッセージキューに入れて非同期処理する。Webhook ハンドラ自体は即座に 200 を返す。
@@ -533,27 +672,60 @@ await stripe.testHelpers.testClocks.advance(testClock.id, {
 
 ### 1. 通貨の最小単位
 
-Stripe の金額は**通貨の最小単位**で指定する。ゼロデシマル通貨（日本円など）はそのまま、その他はセント換算が必要。
+Stripe の金額は**通貨の最小単位**（smallest currency unit）で指定する。これは通貨ごとに異なり、**ゼロデシマル通貨**かどうかで扱いが変わる。
 
-| 通貨 | ¥1,000 の場合 | $10.00 の場合 |
-|------|--------------|--------------|
-| JPY（ゼロデシマル） | `amount: 1000` | — |
-| USD | — | `amount: 1000`（= 10.00 ドル） |
+#### ゼロデシマル通貨とは
+
+通常の通貨（USD, EUR など）は小数点以下2桁を持つ（$10.00 = 1000 cents）。一方、**ゼロデシマル通貨**（zero-decimal currency）は小数部を持たない通貨で、最小単位が通貨単位そのものになる。日本円（JPY）が代表例で、¥1,000 は `amount: 1000` とそのまま指定する。
+
+| 分類 | 通貨の例 | 小数桁数 | 最小単位 | ¥1,000 / $10 相当の `amount` 値 |
+|------|---------|---------|---------|-------------------------------|
+| **ゼロデシマル** | JPY, KRW, VND, CLP, BIF | 0 | 1円, 1ウォン等 | `1000`（= ¥1,000） |
+| **2デシマル**（標準） | USD, EUR, GBP, AUD | 2 | 1セント, 1ペンス等 | `1000`（= $10.00） |
+| **3デシマル** | KWD, BHD, OMR | 3 | 0.001ディナール等 | `10000`（= 10.000 KWD） |
+
+> **注意:** `amount` の数値が同じ `1000` でも、JPY なら ¥1,000、USD なら $10.00（1000セント）、KWD なら 1.000 KWD（1000フィルス）と意味が異なる。
+
+#### よくあるミスと対策
 
 ```typescript
-// ❌ よくあるミス: ドルをそのまま渡す
+// ❌ よくあるミス: ドルをそのまま渡す → $0.10 になる
 await stripe.prices.create({
-  unit_amount: 10,    // $0.10 になってしまう
+  unit_amount: 10,    // 10セント = $0.10
   currency: 'usd',
   // ...
 });
 
 // ✅ 正しい: セント単位で渡す
 await stripe.prices.create({
-  unit_amount: 1000,  // $10.00
+  unit_amount: 1000,  // 1000セント = $10.00
   currency: 'usd',
   // ...
 });
+
+// ✅ JPY はそのまま（ゼロデシマルなので変換不要）
+await stripe.prices.create({
+  unit_amount: 2980,  // ¥2,980
+  currency: 'jpy',
+  // ...
+});
+```
+
+多通貨対応する場合は、通貨ごとの小数桁数を考慮した変換ヘルパーを用意するとミスを防げる。
+
+```typescript
+// 通貨の小数桁数マッピング（Stripe のドキュメントに完全なリストあり）
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'jpy', 'krw', 'vnd', 'clp', 'bif', 'djf', 'gnf', 'kmf',
+  'mga', 'pyg', 'rwf', 'ugx', 'vuv', 'xaf', 'xof', 'xpf',
+]);
+
+function toStripeAmount(amount: number, currency: string): number {
+  if (ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())) {
+    return Math.round(amount);         // ¥2,980 → 2980
+  }
+  return Math.round(amount * 100);     // $10.00 → 1000
+}
 ```
 
 ### 2. Webhook の順序保証がない
@@ -621,9 +793,11 @@ Webhook の冪等性とは別に、**Stripe API を呼び出す側**でもネッ
 
 ```typescript
 // 同じ Idempotency-Key で複数回リクエストしても1回だけ実行される
+// キーは同一操作に対して決定的（deterministic）に生成する
+// Date.now() 等を含めるとリトライごとに異なるキーになり冪等性が機能しない
 const session = await stripe.checkout.sessions.create(
   { /* params */ },
-  { idempotencyKey: `checkout_${userId}_${priceId}_${Date.now()}` }
+  { idempotencyKey: `checkout_${userId}_${priceId}` }
 );
 ```
 
