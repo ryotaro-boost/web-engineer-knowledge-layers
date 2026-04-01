@@ -1,6 +1,7 @@
 ---
 layer: 6
 topic: CORS
+type: topic
 status: 🔴 未着手
 created: 2026-03-30
 ---
@@ -240,6 +241,8 @@ flowchart LR
 | `Max-Age` を設定しない | 毎回プリフライトが飛びパフォーマンスが低下 | `Max-Age: 86400` 等を設定してキャッシュ |
 
 ## 具体例
+
+各フレームワークでの詳細な実装例とよくある落とし穴は[[details/CORS]]にまとまっている。以下は代表的なパターン。
 
 ### Express（Node.js）— CORSミドルウェアの手動実装
 

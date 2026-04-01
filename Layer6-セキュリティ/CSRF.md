@@ -1,6 +1,7 @@
 ---
 layer: 6
 topic: CSRF
+type: topic
 status: 🔴 未着手
 created: 2026-03-30
 ---
