@@ -1,6 +1,7 @@
 ---
 layer: 7
 topic: SOLID原則
+type: topic
 status: 🔴 未着手
 created: 2026-03-30
 ---
@@ -221,9 +222,10 @@ class OrderService
     public function checkout(Order $order): void
     {
         $stripe = new \Stripe\StripeClient('sk_...');
-        $stripe->charges->create([
+        $stripe->paymentIntents->create([
             'amount' => $order->total,
             'currency' => 'jpy',
+            'automatic_payment_methods' => ['enabled' => true],
         ]);
     }
 }
