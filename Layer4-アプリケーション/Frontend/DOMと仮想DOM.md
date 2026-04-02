@@ -191,7 +191,7 @@ Reactの差分検出アルゴリズムは、ツリーの完全な比較（O(n³)
 
 - **下位レイヤーとの関係:**
   - [[HTML-CSS-JS]] — HTMLがパースされてDOMが生成される。DOMはHTMLの「プログラマブルな表現」。CSSOMと合成されてレンダーツリーとなる
-  - [[HTTP-HTTPS|HTTP/HTTPS]]（Layer 2）— サーバーから取得したHTMLが最初のDOMを構築する。SSR（Server-Side Rendering）ではサーバー側でDOMを構築してHTMLとして送信する
+  - [[HTTP-HTTPS|HTTP/HTTPS]]（Layer 2）— サーバーから取得したHTMLが最初のDOMを構築する。[[SSR-SSG-CSR|SSR（Server-Side Rendering）]]ではサーバー側でDOMを構築してHTMLとして送信する
 - **同レイヤーとの関係:**
   - [[状態管理]] — 仮想DOMが解決するのは「状態→UIの反映」であり、状態管理は「状態をどこに持ち、どう変更するか」を扱う。仮想DOMの登場が宣言的な[[状態管理]]ライブラリの基盤となった
   - [[コンポーネント設計]] — 仮想DOMのレンダリング単位がコンポーネント。コンポーネントの粒度が再レンダリングの範囲に直結する

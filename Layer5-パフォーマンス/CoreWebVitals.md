@@ -62,7 +62,7 @@ graph LR
 | サーバーレスポンスが遅い（TTFB） | [[CDN]] の導入、サーバーサイドキャッシュ、データベース最適化 |
 | レンダーブロッキングリソース | CSSのインライン化（Critical CSS）、JSの `defer`/`async` |
 | リソースの読み込みが遅い | [[画像フォーマットと最適化|画像の最適化（WebP/AVIF）]]、`fetchpriority="high"`、プリロード |
-| クライアントサイドレンダリング | SSR/SSGの採用、ストリーミングHTMLレスポンス |
+| クライアントサイドレンダリング | [[SSR-SSG-CSR|SSR/SSG]]の採用、ストリーミングHTMLレスポンス |
 
 ### 2. INP（Interaction to Next Paint）--- 操作応答性
 
