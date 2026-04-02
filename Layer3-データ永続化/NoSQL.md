@@ -82,7 +82,7 @@ RDBのACIDに対し、多くのNoSQLは **BASE** という特性を持つ:
 
 - **同レイヤーとの関係:**
   - [[RDB]]: NoSQLはRDBの代替ではなく補完。多くの実システムではRDBとNoSQLを併用する（Polyglot Persistence）
-  - [[インデックス]]: NoSQLでもインデックスは重要。MongoDBのセカンダリインデックス、DynamoDBのGSI（Global Secondary Index）/ LSI（Local Secondary Index）など
+  - [[Resources/Study/Layer3-データ永続化/インデックス|インデックス]]: NoSQLでもインデックスは重要。MongoDBのセカンダリインデックス、DynamoDBのGSI（Global Secondary Index）/ LSI（Local Secondary Index）など
   - [[キャッシュ戦略]]: RedisはNoSQLであると同時にキャッシュとしても広く使われる。キャッシュ戦略の選択と密接に関連する
 
 - **上位レイヤーとの関係:**
