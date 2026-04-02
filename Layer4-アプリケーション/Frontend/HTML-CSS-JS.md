@@ -1,6 +1,7 @@
 ---
 layer: 4
 topic: HTML/CSS/JSの本質
+type: topic
 status: 🔴 未着手
 created: 2026-03-29
 ---

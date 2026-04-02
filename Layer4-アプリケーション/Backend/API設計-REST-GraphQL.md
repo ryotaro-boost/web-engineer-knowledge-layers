@@ -1,6 +1,7 @@
 ---
 layer: 4
 topic: API設計（REST / GraphQL）
+type: topic
 status: 🔴 未着手
 created: 2026-03-28
 ---
@@ -428,7 +429,7 @@ func (s *UserStore) Delete(w http.ResponseWriter, r *http.Request) {
 
 ```php
 // routes/api.php — 宣言的ルーティング
-// 1行で GET/POST/PUT/DELETE の5つのルートが生成される
+// 1行で5つのルート（index, store, show, update, destroy）が生成される
 use App\Http\Controllers\UserController;
 
 Route::apiResource('users', UserController::class);
