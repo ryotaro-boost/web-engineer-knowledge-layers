@@ -1,6 +1,7 @@
 ---
 layer: 1
 topic: Docker
+type: topic
 status: 🔴 未着手
 created: 2026-03-28
 ---
@@ -108,7 +109,7 @@ COPY . .                   # レイヤー4: アプリコード（頻繁に変更
 **解決:** Docker Composeは複数コンテナの構成を `compose.yaml`（Compose V2 推奨。`docker-compose.yml` も後方互換で動作する）で宣言的に定義する。
 
 ```yaml
-# docker-compose.yml
+# compose.yaml（docker-compose.yml でも動作する）
 services:
   app:
     build: .

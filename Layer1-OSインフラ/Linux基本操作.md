@@ -1,6 +1,7 @@
 ---
 layer: 1
 topic: Linux基本操作
+type: topic
 status: 🔴 未着手
 created: 2026-03-28
 ---
@@ -105,7 +106,7 @@ chown www-data:www-data /var/www/html/ # 所有者をWebサーバーユーザー
 
 ### 5. サービスとsystemd
 
-モダンなLinuxディストリビューション（Ubuntu 16.04+, CentOS 7+）では、systemd がサービス管理を担う。
+現在サポートされている主要なLinuxディストリビューション（Ubuntu 20.04+, RHEL 8+, Debian 11+ 等）では、systemd がサービス管理を担う。
 
 ```bash
 # サービス管理
