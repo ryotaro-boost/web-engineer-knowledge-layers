@@ -79,7 +79,7 @@ graph TD
   - [[コンポーネント設計]] — HTML/CSS/JSの3つを**コンポーネント単位で再パッケージ化**する設計手法
   - [[アクセシビリティ]] — セマンティックHTMLが基盤。HTMLの構造が正しくなければARIA属性でも補えない
 - **上位レイヤーとの関係:**
-  - [[Layer5-パフォーマンス/_index|パフォーマンス]]（Layer 5）— Core Web Vitals（LCP, INP, CLS）は全てHTML/CSS/JSの読み込みと実行に直結する。レンダーブロッキングの理解が必要
+  - [[Layer5-パフォーマンス/_index|パフォーマンス]]（Layer 5）— [[CoreWebVitals|Core Web Vitals]]（LCP, INP, CLS）は全てHTML/CSS/JSの読み込みと実行に直結する。レンダーブロッキングの理解が必要
   - [[Layer6-セキュリティ/_index|セキュリティ]]（Layer 6）— [[SQLインジェクションとXSS|XSS]]はJSの実行を悪用する攻撃。CSP（Content Security Policy）はインラインJSの実行を制限することで防御する
 
 ### ブラウザのレンダリングパイプライン
