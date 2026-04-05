@@ -271,6 +271,210 @@ async function processPayment(orderId: string) {
 }
 ```
 
+### 他言語でのモジュラーモノリス構成
+
+#### Go — internal パッケージによるモジュール境界
+
+Go では `internal` ディレクトリを使うことで、コンパイラレベルでモジュール内部の実装を外部から隠蔽できる。
+
+```
+myapp/
+├── cmd/server/main.go
+├── modules/
+│   ├── user/
+│   │   ├── handler.go          # 公開 API（外部からimport可能）
+│   │   ├── service.go          # 公開サービスインターフェース
+│   │   └── internal/
+│   │       ├── repo.go         # 内部実装（外部パッケージからimport不可）
+│   │       └── model.go
+│   └── order/
+│       ├── handler.go
+│       ├── service.go
+│       └── internal/
+│           ├── repo.go
+│           └── model.go
+└── go.mod
+```
+
+```go
+// modules/user/service.go
+// 公開インターフェース — 他モジュールはこれだけに依存する
+package user
+
+import "context"
+
+type User struct {
+	ID    string
+	Email string
+	Name  string
+}
+
+// Service はユーザーモジュールの公開契約
+type Service interface {
+	FindByID(ctx context.Context, id string) (*User, error)
+}
+
+// NewService は内部実装を隠蔽して公開インターフェースを返す
+func NewService(dsn string) Service {
+	return &service{dsn: dsn}
+}
+
+// 非公開の実装 — 小文字始まりでパッケージ外からアクセス不可
+type service struct {
+	dsn string
+}
+
+func (s *service) FindByID(ctx context.Context, id string) (*User, error) {
+	// internal/repo.go の関数を呼び出して DB アクセス
+	// 外部モジュール (order等) からは internal 配下を直接参照できない
+	return &User{ID: id, Email: "user@example.com", Name: "Alice"}, nil
+}
+```
+
+```go
+// modules/order/handler.go
+// 他モジュールの公開インターフェースだけに依存する例
+package order
+
+import (
+	"context"
+	"errors"
+	"myapp/modules/user" // user.Service のみ利用可能
+)
+
+type OrderService struct {
+	userSvc user.Service // 内部実装ではなくインターフェースに依存
+}
+
+func NewOrderService(userSvc user.Service) *OrderService {
+	return &OrderService{userSvc: userSvc}
+}
+
+func (s *OrderService) Create(ctx context.Context, userID string) error {
+	u, err := s.userSvc.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		return errors.New("user not found")
+	}
+	// 注文作成ロジック ...
+	return nil
+}
+```
+
+#### PHP/Laravel — ドメインフォルダ + Service Provider
+
+Laravel ではデフォルトの `app/Models/`, `app/Http/Controllers/` 構成をやめ、ドメイン単位にフォルダを切ることでモジュラーモノリスを実現する。モジュール間の依存は Service Provider で制御する。
+
+```
+app/
+├── Modules/
+│   ├── User/
+│   │   ├── UserServiceProvider.php
+│   │   ├── Contracts/
+│   │   │   └── UserServiceInterface.php   # 公開契約
+│   │   ├── Services/
+│   │   │   └── UserService.php            # 内部実装
+│   │   ├── Models/
+│   │   │   └── User.php
+│   │   └── Routes/
+│   │       └── api.php
+│   └── Order/
+│       ├── OrderServiceProvider.php
+│       ├── Services/
+│       │   └── OrderService.php
+│       ├── Models/
+│       │   └── Order.php
+│       └── Routes/
+│           └── api.php
+└── Providers/
+    └── AppServiceProvider.php
+```
+
+```php
+<?php
+// app/Modules/User/Contracts/UserServiceInterface.php
+// モジュールの公開契約 — 他モジュールはこのインターフェースにのみ依存する
+namespace App\Modules\User\Contracts;
+
+interface UserServiceInterface
+{
+    public function findById(string $id): ?array;
+}
+```
+
+```php
+<?php
+// app/Modules/User/Services/UserService.php
+// 内部実装 — 直接参照せず ServiceProvider 経由で解決する
+namespace App\Modules\User\Services;
+
+use App\Modules\User\Contracts\UserServiceInterface;
+use App\Modules\User\Models\User;
+
+class UserService implements UserServiceInterface
+{
+    public function findById(string $id): ?array
+    {
+        $user = User::find($id);
+        // モジュール外に Eloquent Model を漏らさず配列で返す
+        return $user ? ['id' => $user->id, 'name' => $user->name] : null;
+    }
+}
+```
+
+```php
+<?php
+// app/Modules/User/UserServiceProvider.php
+// Service Provider でインターフェースと実装をバインドする
+namespace App\Modules\User;
+
+use Illuminate\Support\ServiceProvider;
+use App\Modules\User\Contracts\UserServiceInterface;
+use App\Modules\User\Services\UserService;
+
+class UserServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // 他モジュールは UserServiceInterface を型ヒントで注入できる
+        $this->app->bind(UserServiceInterface::class, UserService::class);
+    }
+
+    public function boot(): void
+    {
+        $this->loadRoutesFrom(__DIR__ . '/Routes/api.php');
+    }
+}
+```
+
+```php
+<?php
+// app/Modules/Order/Services/OrderService.php
+// 他モジュールの公開契約だけに依存する
+namespace App\Modules\Order\Services;
+
+use App\Modules\User\Contracts\UserServiceInterface;
+
+class OrderService
+{
+    // コンストラクタインジェクションでインターフェースを受け取る
+    public function __construct(
+        private UserServiceInterface $userService,
+    ) {}
+
+    public function create(string $userId, array $items): void
+    {
+        $user = $this->userService->findById($userId);
+        if ($user === null) {
+            throw new \RuntimeException('User not found');
+        }
+        // 注文作成ロジック ...
+    }
+}
+```
+
 ### アーキテクチャ選択のフローチャート
 
 ```mermaid

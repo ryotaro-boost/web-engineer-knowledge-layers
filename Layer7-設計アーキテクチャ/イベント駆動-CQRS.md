@@ -78,7 +78,7 @@ graph TD
     style MQ fill:#ffd,stroke:#333
 ```
 
-### イベントソーシング（Event Sourcing）
+### [[イベントソーシング]]（Event Sourcing）
 
 **問題:** 現在の状態だけを保存すると「なぜこの状態になったか」の履歴が失われる。監査・デバッグ・状態の巻き戻しが困難。
 
@@ -326,6 +326,143 @@ class PaymentEventHandler {
     await this.processedEvents.add(eventId);
   }
 }
+```
+
+### 他言語でのイベント駆動実装
+
+**Go — チャネルとgoroutineを活用したイベントハンドラ**
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+// イベントの定義
+type OrderPlacedEvent struct {
+	OrderID string
+	UserID  string
+	Items   []OrderItem
+}
+
+type OrderItem struct {
+	ProductID string
+	Quantity  int
+	Price     int
+}
+
+// イベントハンドラのインターフェース
+type EventHandler interface {
+	Handle(event OrderPlacedEvent)
+}
+
+// イベントバス — チャネルで非同期にイベントを配信
+type EventBus struct {
+	handlers []EventHandler
+}
+
+func (b *EventBus) Subscribe(h EventHandler) {
+	b.handlers = append(b.handlers, h)
+}
+
+func (b *EventBus) Publish(event OrderPlacedEvent) {
+	var wg sync.WaitGroup
+	for _, h := range b.handlers {
+		wg.Add(1)
+		go func(handler EventHandler) {
+			defer wg.Done()
+			handler.Handle(event) // 各ハンドラをgoroutineで並行実行
+		}(h)
+	}
+	wg.Wait()
+}
+
+// 在庫サービスのハンドラ
+type InventoryHandler struct{}
+
+func (h *InventoryHandler) Handle(event OrderPlacedEvent) {
+	for _, item := range event.Items {
+		fmt.Printf("[在庫] %s を %d 個引き当て\n", item.ProductID, item.Quantity)
+	}
+}
+
+// 通知サービスのハンドラ
+type NotificationHandler struct{}
+
+func (h *NotificationHandler) Handle(event OrderPlacedEvent) {
+	fmt.Printf("[通知] ユーザー %s に注文確認メール送信（注文ID: %s）\n",
+		event.UserID, event.OrderID)
+}
+
+func main() {
+	bus := &EventBus{}
+	bus.Subscribe(&InventoryHandler{})
+	bus.Subscribe(&NotificationHandler{})
+
+	// 注文確定イベントを発行
+	bus.Publish(OrderPlacedEvent{
+		OrderID: "ORD-001",
+		UserID:  "USR-42",
+		Items:   []OrderItem{{ProductID: "PROD-A", Quantity: 2, Price: 500}},
+	})
+}
+```
+
+**Python — フレームワーク非依存のイベントバスパターン**
+
+```python
+from dataclasses import dataclass, field
+from collections import defaultdict
+from typing import Callable, Any
+
+# イベントの定義
+@dataclass
+class OrderPlacedEvent:
+    order_id: str
+    user_id: str
+    items: list[dict] = field(default_factory=list)
+
+# シンプルなイベントバス
+class EventBus:
+    def __init__(self) -> None:
+        # イベント型 → ハンドラリストのマッピング
+        self._handlers: dict[type, list[Callable]] = defaultdict(list)
+
+    def subscribe(self, event_type: type, handler: Callable) -> None:
+        self._handlers[event_type].append(handler)
+
+    def publish(self, event: Any) -> None:
+        for handler in self._handlers[type(event)]:
+            handler(event)
+
+# 各サービスのハンドラ（独立した関数として定義）
+def handle_inventory(event: OrderPlacedEvent) -> None:
+    for item in event.items:
+        print(f"[在庫] {item['product_id']} を {item['quantity']} 個引き当て")
+
+def handle_notification(event: OrderPlacedEvent) -> None:
+    print(f"[通知] ユーザー {event.user_id} に注文確認メール送信"
+          f"（注文ID: {event.order_id}）")
+
+def handle_points(event: OrderPlacedEvent) -> None:
+    total = sum(i["price"] * i["quantity"] for i in event.items)
+    points = total // 100  # 100円ごとに1ポイント
+    print(f"[ポイント] ユーザー {event.user_id} に {points} pt 付与")
+
+if __name__ == "__main__":
+    bus = EventBus()
+    bus.subscribe(OrderPlacedEvent, handle_inventory)
+    bus.subscribe(OrderPlacedEvent, handle_notification)
+    bus.subscribe(OrderPlacedEvent, handle_points)
+
+    # 注文確定イベントを発行
+    bus.publish(OrderPlacedEvent(
+        order_id="ORD-001",
+        user_id="USR-42",
+        items=[{"product_id": "PROD-A", "quantity": 2, "price": 500}],
+    ))
 ```
 
 ### CQRSの適用判断
