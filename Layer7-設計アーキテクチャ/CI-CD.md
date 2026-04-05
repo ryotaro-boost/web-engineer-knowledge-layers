@@ -91,7 +91,7 @@ CIのテストはあくまで「書いたテストが通った」ことを証明
 
 ### 3. 「デプロイ頻度を上げるとリスクが増える」は逆
 
-直感に反するが、デプロイ頻度が高いほどリスクは**下がる**。1回のデプロイに含まれる変更が小さいため、問題の原因特定とロールバックが容易になる。Google の DORA（DevOps Research and Assessment）の調査で、デプロイ頻度・変更リードタイム・障害復旧時間・変更失敗率の4指標が相関することが実証されている。
+直感に反するが、デプロイ頻度が高いほどリスクは**下がる**。1回のデプロイに含まれる変更が小さいため、問題の原因特定とロールバックが容易になる。DORA（DevOps Research and Assessment、2018年に Google Cloud が買収）の調査で、デプロイ頻度・変更リードタイム・障害復旧時間・変更失敗率の4指標が相関することが実証されている。
 
 ### 4. 「CI/CD パイプラインは一度作ったら完成」ではない
 
@@ -173,7 +173,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
@@ -186,7 +186,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
       - run: npm ci
       - run: npm test -- --coverage
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_DB: test
           POSTGRES_USER: test
@@ -208,7 +208,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
       - run: npm ci
       - run: npm run test:integration
