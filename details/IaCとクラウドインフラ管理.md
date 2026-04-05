@@ -196,7 +196,7 @@ Terraform のオープンソースフォーク。2023年8月にHashiCorpがTerra
 
 HCL や YAML ではなく、TypeScript・Python・Go 等の汎用プログラミング言語でインフラを定義するアプローチもある。
 
-**AWS CDK（Cloud Development Kit）** は AWS が提供するフレームワークで、内部的に CloudFormation テンプレートを生成する。**Pulumi** はマルチクラウド対応のツールで、Terraform プロバイダーを活用しつつ汎用言語で記述できる。
+**AWS CDK（Cloud Development Kit）** は AWS が提供するフレームワークで、内部的に CloudFormation テンプレートを生成する（[[AWS-CDKのコンストラクトモデル|コンストラクトモデルの詳細]]を参照）。**Pulumi** はマルチクラウド対応のツールで、Terraform プロバイダーを活用しつつ汎用言語で記述できる。
 
 ```typescript
 // AWS CDK（TypeScript）例：同等の VPC + サブネット
