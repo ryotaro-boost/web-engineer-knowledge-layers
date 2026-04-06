@@ -459,7 +459,7 @@ function ScrollToBottom({ messages }) {
 ## 参考リソース
 
 - [React公式ドキュメント — Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state) — ReconciliationとStateの関係を解説
-- [React公式ドキュメント — Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html) — 差分検出アルゴリズムの詳細
+- [React公式ドキュメント — Reconciliation](https://react.dev/learn/render-and-commit) — レンダリングとコミットの流れ（旧ドキュメントの [Reconciliation](https://legacy.reactjs.org/docs/reconciliation.html) も差分検出アルゴリズムの詳細として参考になる）
 - [Virtual DOM is pure overhead (Svelte blog)](https://svelte.dev/blog/virtual-dom-is-pure-overhead) — Rich Harris による仮想DOMの限界の分析
 - 書籍:『りあクト！TypeScriptで始めるつらくないReact開発』— 日本語でのReact内部構造の解説
 
