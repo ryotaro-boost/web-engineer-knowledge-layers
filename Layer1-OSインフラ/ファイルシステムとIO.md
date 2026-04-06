@@ -159,6 +159,58 @@ const stream = fs.createReadStream('huge.csv', { encoding: 'utf8' });
 stream.on('data', (chunk) => processChunk(chunk));
 ```
 
+Go は `io.Reader` / `io.Writer` インターフェースが言語設計の根幹にあり、ストリーミング処理が自然に書ける。ファイルサイズに依存しないメモリ消費が実現できる（具体的な消費量の比較は [[メモリバジェット分析]] を参照）。
+
+```go
+package main
+
+import (
+	"bufio"
+	"io"
+	"os"
+)
+
+func processLargeFile(src, dst string) error {
+	// Bad: 全読み込み（ファイルサイズ分のメモリを確保）
+	// data, _ := os.ReadFile(src)
+
+	// Good: io.Reader のパイプラインで逐次処理（メモリは数KB）
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// bufio.Scanner で行単位に処理
+	scanner := bufio.NewScanner(in)
+	writer := bufio.NewWriter(out)
+	defer writer.Flush()
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		processed := processLine(line)
+		writer.WriteString(processed + "\n")
+	}
+	return scanner.Err()
+}
+
+// io.Copy を使えばさらにシンプルにストリーミングコピーできる
+func copyFile(src, dst string) error {
+	in, _ := os.Open(src)
+	defer in.Close()
+	out, _ := os.Create(dst)
+	defer out.Close()
+	_, err := io.Copy(out, in) // 内部的に32KBバッファで逐次転送
+	return err
+}
+```
+
 ### 一時ファイル＋リネームで原子的に書き込む
 書き込み途中でクラッシュしてもファイルが壊れないようにする古典的パターン。
 
