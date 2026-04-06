@@ -643,4 +643,4 @@ end
 
 - RESTの「正しさ」にこだわりすぎない。Richardson Maturity Model のLevel 2（HTTPメソッドの適切な使用）まで実践できていれば実務上は十分
 - GraphQLはバックエンド側の実装コスト（スキーマ定義、リゾルバ、DataLoader、クエリ制限）が高い。導入前にチームのスキルセットと問題の複雑さを検討する
-- 社内APIはREST、BFF（Backend for Frontend）パターンではGraphQLという使い分けも現実的
+- 社内APIはREST、[[Backend-For-Frontend|BFF（Backend for Frontend）]]パターンではGraphQLという使い分けも現実的
