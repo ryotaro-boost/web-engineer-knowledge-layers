@@ -586,7 +586,7 @@ graph LR
           tag = self.rev or "dev";  # git コミットハッシュをタグに
 
           contents = [
-            pkgs.nodejs_20-slim
+            pkgs.nodejs_20
             myApp
             pkgs.cacert          # HTTPS 通信用の CA 証明書
             pkgs.tzdata          # タイムゾーンデータ

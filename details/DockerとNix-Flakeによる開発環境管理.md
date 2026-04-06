@@ -268,7 +268,7 @@ pkgs.dockerTools.buildLayeredImage {
 
   # レイヤーを分離してキャッシュ効率を上げる
   contents = [
-    pkgs.nodejs_20-slim
+    pkgs.nodejs_20
     myAppPackage
   ];
 
