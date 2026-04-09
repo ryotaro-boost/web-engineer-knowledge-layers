@@ -238,11 +238,11 @@ flowchart LR
 | `Allow-Origin: *` をデフォルトで生成 | LLMは動作させることを優先して全開放しがち | 具体的なオリジンを環境変数から取得 |
 | `Allow-Methods: *` や `Allow-Headers: *` | 必要最小限の原則に反し攻撃面が広がる | 実際に使うメソッド・ヘッダのみ列挙 |
 | CORSミドルウェアと手動OPTIONSハンドラの併設 | 二重処理で予期しない挙動になる | フレームワークのCORS機能かミドルウェアかどちらかに統一 |
-| `Max-Age` を設定しない | 毎回プリフライトが飛びパフォーマンスが低下 | `Max-Age: 86400` 等を設定してキャッシュ |
+| `Max-Age` を設定しない | 毎回プリフライトが飛びパフォーマンスが低下 | `Max-Age: 7200`（Chromium 系の上限に合わせる）を設定してキャッシュ。詳細は[[details/CORS]] |
 
 ## 具体例
 
-各フレームワークでの詳細な実装例とよくある落とし穴は[[details/CORS]]にまとまっている。以下は代表的なパターン。
+プリフライトキャッシュのブラウザ別上限・サブドメインワイルドカード・WebSocket での Origin 検証・iframe + postMessage・COOP/COEP/CORP との関係といった応用トピックは[[details/CORS]]にまとめている。以下は基本的なフレームワーク実装パターン。
 
 ### Express（Node.js）— CORSミドルウェアの手動実装
 
@@ -439,7 +439,7 @@ flowchart TD
 - MDN Web Docs: Cross-Origin Resource Sharing (CORS) — CORSの公式リファレンス
 - MDN Web Docs: Same-origin policy — 同一オリジンポリシーの詳細
 - web.dev: Cross-Origin Resource Sharing — 実践的な解説とベストプラクティス
-- [[details/CORS]] — 各フレームワークでの実装例とよくある落とし穴の詳細
+- [[details/CORS]] — プリフライトキャッシュのブラウザ別上限、サブドメインワイルドカード、WebSocket、iframe postMessage、COOP/COEP/CORP との関係などの応用トピック
 
 ## 学習メモ
 
@@ -447,4 +447,4 @@ flowchart TD
 - 「CORSがCSRFを防ぐ」は誤り — CORSはレスポンス読み取りの制御、CSRFはリクエスト送信の悪用
 - `Content-Type: application/json` でプリフライトが飛ぶ — 最もよくあるハマりポイント
 - `Allow-Origin: *` と `Credentials: true` は併用不可 — Cookie認証では具体的なオリジンが必要
-- 既存の[[details/CORS]]に、各フレームワーク実装とよくある落とし穴がまとまっている
+- [[details/CORS]] に、プリフライトキャッシュ上限・WebSocket・COOP/COEP/CORP などの応用トピックがまとまっている

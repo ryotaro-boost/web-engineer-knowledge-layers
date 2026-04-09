@@ -1,298 +1,187 @@
 ---
-layer: 4
-parent: "[[ルーティングとミドルウェア]]"
+layer: 6
+parent: "[[CORS]]"
 type: detail
 created: 2026-03-28
 ---
 
-# CORS（Cross-Origin Resource Sharing）
+# CORS の応用・エッジケース
 
-> **一言で言うと:** ブラウザの同一オリジンポリシー（Same-Origin Policy）を**安全に緩和する**ための仕組み。サーバーが「このオリジンからのリクエストは許可する」とHTTPヘッダで宣言することで、異なるオリジン間の通信を制御する。
+> **一言で言うと:** CORS の概念・基本フロー・主要フレームワーク実装は [[CORS]] トピックにまとまっている。本ドキュメントでは、トピックでは扱いきれない応用トピック（プリフライトキャッシュのブラウザ差異、サブドメインワイルドカード、WebSocket・iframe との関係、開発環境での回避策、COOP/COEP/CORP との関係）に焦点を当てる。
 
-## 前提: 同一オリジンポリシー
+## プリフライトキャッシュ（Access-Control-Max-Age）のブラウザ別上限
 
-CORSを理解するには、まず「なぜブラウザがクロスオリジンリクエストを制限するのか」を知る必要がある。
+`Access-Control-Max-Age` でプリフライト結果のキャッシュ秒数をサーバーから指定できるが、**ブラウザ側に独自の上限値があり、それを超えた値を指定しても上限でクランプされる**。
 
-**オリジン（Origin）** = スキーム + ホスト + ポートの組み合わせ。1つでも異なれば「異なるオリジン」になる。
+| ブラウザ | 上限値（実装上の cap） |
+|---------|---------------------|
+| Chromium 系（Chrome / Edge） | 7,200 秒（2 時間） |
+| Firefox | 86,400 秒（24 時間） |
+| Safari | 約 600 秒（10 分）— 主要ブラウザの中で最も短い |
 
-| URL | `https://app.example.com` と同一か | 理由 |
-|-----|-----|------|
-| `https://app.example.com/page` | 同一 | パスが違うだけ |
-| `http://app.example.com` | 異なる | スキームが違う（http vs https） |
-| `https://api.example.com` | 異なる | ホストが違う（サブドメイン違い） |
-| `https://app.example.com:8080` | 異なる | ポートが違う |
+サーバーで `Access-Control-Max-Age: 86400` を指定しても、Chrome では 2 時間ごとにプリフライトが再送される。**「Max-Age を大きく設定したのにプリフライトが頻繁に飛ぶ」**という症状はこのブラウザ上限が原因のことが多い。
 
-ブラウザは同一オリジンポリシーにより、あるオリジンのページから**別のオリジンへのHTTPリクエストのレスポンス読み取り**をデフォルトで禁止する。これがないと、悪意あるサイトがユーザーのログイン済みセッションを利用して、銀行サイトのAPIを叩いてレスポンスを盗み見ることができてしまう。
+実用上は **`Max-Age: 7200`** を指定しておけば全主要ブラウザで効果がある。
 
-```mermaid
-sequenceDiagram
-    participant User as ブラウザ<br/>（evil.com を閲覧中）
-    participant Evil as evil.com
-    participant Bank as bank.example.com
+## サブドメインのワイルドカード許可ができない
 
-    User->>Evil: ページを閲覧
-    Evil->>User: 悪意あるJSを返す
-    User->>Bank: fetch("https://bank.example.com/api/balance")<br/>Cookie付き（自動送信）
-    Bank->>User: 200 OK（残高データ）
+`Access-Control-Allow-Origin` のワイルドカード `*` は「すべてのオリジン」を意味し、**部分ワイルドカード（`https://*.example.com`）は仕様上使えない**。サブドメインを許可したい場合は、サーバー側でリクエストの `Origin` ヘッダをパターンマッチしてから動的にレスポンスを返す必要がある。
 
-    rect rgb(255, 235, 238)
-        Note over User: 同一オリジンポリシーにより<br/>JSからレスポンスを読み取れない
-    end
-    Note over Evil: レスポンスを盗めない
-```
-
-**重要:** 同一オリジンポリシーが制限するのは**レスポンスの読み取り**であって、**リクエストの送信自体ではない**。リクエストはサーバーに到達する（これがCSRF攻撃の根拠）。CORSはこの「レスポンス読み取り禁止」を、サーバーの許可に基づいて緩和する。
-
-## CORSの仕組み — 2つのリクエストフロー
-
-### 単純リクエスト（Simple Request）
-
-以下の条件を**すべて満たす**リクエストは、プリフライトなしで直接送信される:
-
-- メソッドが `GET`、`HEAD`、`POST` のいずれか
-- ヘッダが `Accept`、`Accept-Language`、`Content-Language`、`Content-Type` のみ
-- `Content-Type` が `application/x-www-form-urlencoded`、`multipart/form-data`、`text/plain` のいずれか
-
-```mermaid
-sequenceDiagram
-    participant B as ブラウザ<br/>（app.example.com）
-    participant S as APIサーバー<br/>（api.example.com）
-
-    B->>S: GET /data<br/>Origin: https://app.example.com
-    S->>B: 200 OK<br/>Access-Control-Allow-Origin: https://app.example.com
-
-    Note over B: ヘッダを確認し<br/>JSにレスポンスを渡す
-```
-
-### プリフライトリクエスト（Preflight Request）
-
-単純リクエストの条件を満たさない場合（`PUT`/`DELETE` メソッド、`Authorization` ヘッダ、`application/json` の `Content-Type` など）、ブラウザは本リクエストの前に `OPTIONS` リクエストを送信して許可を確認する。
-
-```mermaid
-sequenceDiagram
-    participant B as ブラウザ<br/>（app.example.com）
-    participant S as APIサーバー<br/>（api.example.com）
-
-    rect rgb(255, 249, 196)
-        Note over B,S: プリフライト（OPTIONS）
-        B->>S: OPTIONS /users<br/>Origin: https://app.example.com<br/>Access-Control-Request-Method: DELETE<br/>Access-Control-Request-Headers: Authorization
-        S->>B: 204 No Content<br/>Access-Control-Allow-Origin: https://app.example.com<br/>Access-Control-Allow-Methods: GET, POST, DELETE<br/>Access-Control-Allow-Headers: Authorization<br/>Access-Control-Max-Age: 86400
-    end
-
-    rect rgb(232, 245, 233)
-        Note over B,S: 本リクエスト
-        B->>S: DELETE /users/42<br/>Origin: https://app.example.com<br/>Authorization: Bearer eyJ...
-        S->>B: 200 OK<br/>Access-Control-Allow-Origin: https://app.example.com
-    end
-```
-
-## CORSヘッダ一覧
-
-### レスポンスヘッダ（サーバーが返す）
-
-| ヘッダ | 役割 | 値の例 |
-|--------|------|--------|
-| `Access-Control-Allow-Origin` | 許可するオリジン | `https://app.example.com` または `*` |
-| `Access-Control-Allow-Methods` | 許可するHTTPメソッド（プリフライト応答） | `GET, POST, PUT, DELETE` |
-| `Access-Control-Allow-Headers` | 許可するリクエストヘッダ（プリフライト応答） | `Authorization, Content-Type` |
-| `Access-Control-Allow-Credentials` | Cookieの送信を許可するか | `true` |
-| `Access-Control-Expose-Headers` | JSから読み取り可能にするレスポンスヘッダ | `X-Request-Id, X-Total-Count` |
-| `Access-Control-Max-Age` | プリフライト結果のキャッシュ秒数 | `86400`（24時間） |
-
-### リクエストヘッダ（ブラウザが自動付与）
-
-| ヘッダ | 役割 |
-|--------|------|
-| `Origin` | リクエスト元のオリジン |
-| `Access-Control-Request-Method` | 本リクエストで使うメソッド（プリフライト時） |
-| `Access-Control-Request-Headers` | 本リクエストで送るヘッダ（プリフライト時） |
-
-## コード例
-
-### Express（Node.js）— CORSミドルウェアの実装
-
-```javascript
-import express from 'express';
+```typescript
+import express, { Request, Response, NextFunction } from "express";
 
 const app = express();
 
-// 許可するオリジンのリスト
-const ALLOWED_ORIGINS = [
-  'https://app.example.com',
-  'https://staging.example.com',
-];
+// サブドメインの許可パターン
+const ORIGIN_PATTERN = /^https:\/\/([a-z0-9-]+\.)?example\.com$/;
 
-// CORSミドルウェア
-function cors(req, res, next) {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
-
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
-    res.setHeader('Vary', 'Origin');
+  if (origin && ORIGIN_PATTERN.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin"); // キャッシュ汚染防止に必須
   }
-
-  // プリフライトリクエストへの応答
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    return res.status(204).end();
-  }
-
   next();
-}
+});
+```
 
-app.use(cors);
+**注意点:**
+- 正規表現の `.` をエスケープしないと `examplexcom` のような攻撃ドメインも一致してしまう
+- ホワイトリスト方式（明示列挙）で済むなら、正規表現は使わない方が安全
+- `Vary: Origin` を付け忘れると CDN/ブラウザキャッシュが他オリジン用のレスポンスを返して CORS エラーが発生する
 
-app.get('/api/data', (req, res) => {
-  res.json({ message: 'CORSが許可されたレスポンス' });
+## WebSocket における CORS の不在
+
+WebSocket のハンドシェイクは HTTP の `Upgrade` リクエストで開始されるが、**CORS の制約は適用されない**。ブラウザは WebSocket 接続時に CORS のプリフライトを送信せず、`Access-Control-Allow-Origin` ヘッダもチェックしない。
+
+代わりに、WebSocket リクエストには **`Origin` ヘッダ**が必ず含まれるため、**サーバー側でこのヘッダを明示的に検証する責任がある**。
+
+```typescript
+import { WebSocketServer } from "ws";
+import { createServer } from "http";
+
+const ALLOWED_ORIGINS = new Set([
+  "https://app.example.com",
+  "https://admin.example.com",
+]);
+
+// ws v8 系では verifyClient も使えるが、HTTP サーバーの upgrade イベントで
+// 処理する書き方が現在の推奨パターン（より柔軟で型情報も扱いやすい）
+const server = createServer();
+const wss = new WebSocketServer({ noServer: true });
+
+server.on("upgrade", (request, socket, head) => {
+  const origin = request.headers.origin;
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request);
+  });
 });
 
-app.listen(3000);
+server.listen(8080);
 ```
 
-### Go（Chi）— CORSミドルウェアの実装
+**「WebSocket は CORS で守られている」という誤解は危険**。CSRF と同じく、ブラウザは攻撃サイトからの WebSocket 接続をブロックしないため、サーバー側の Origin 検証が唯一の防御線となる。
 
-```go
-package main
+## iframe + postMessage — CORS が関係しないクロスオリジン通信
 
-import (
-	"net/http"
-	"slices"
+クロスオリジンの `<iframe>` 内のドキュメントとは **CORS ではなく `postMessage` API でやり取りする**。同一オリジンポリシーにより iframe 内の DOM や JavaScript には直接アクセスできないが、`postMessage` は明示的にメッセージを送る仕組みとして設計されている。
 
-	"github.com/go-chi/chi/v5"
-)
+```typescript
+// 親ウィンドウから iframe へ送信
+const iframe = document.querySelector<HTMLIFrameElement>("#child");
+iframe?.contentWindow?.postMessage(
+  { type: "auth", token: "abc123" },
+  "https://child.example.com" // 必ず targetOrigin を指定
+);
 
-var allowedOrigins = []string{
-	"https://app.example.com",
-	"https://staging.example.com",
-}
-
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-
-		if slices.Contains(allowedOrigins, origin) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Vary", "Origin")
-		}
-
-		// プリフライトリクエストへの応答
-		if r.Method == http.MethodOptions {
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			w.Header().Set("Access-Control-Max-Age", "86400")
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func main() {
-	r := chi.NewRouter()
-	r.Use(corsMiddleware)
-
-	r.Get("/api/data", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message":"CORSが許可されたレスポンス"}`))
-	})
-
-	http.ListenAndServe(":3000", r)
-}
+// iframe 側で受信
+window.addEventListener("message", (event) => {
+  // 必ず Origin を検証
+  if (event.origin !== "https://parent.example.com") return;
+  console.log("受信:", event.data);
+});
 ```
 
-### Python（FastAPI）— CORS設定
+**よくあるミス:**
+- `postMessage` の第 2 引数に `"*"` を指定 → 任意のオリジンにメッセージが届きうる（機密情報を含む場合は致命的）
+- 受信側で `event.origin` を検証していない → 攻撃者が iframe を埋め込んで偽メッセージを送れる
 
-```python
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+## 開発環境での CORS 回避策
 
-app = FastAPI()
+開発時にフロント（`localhost:5173` 等）から API（`localhost:8080` 等）を呼ぶ際の CORS エラーは、**サーバー側の CORS 設定で `localhost` を許可する**のが正攻法だが、本番設定との分岐が増える。代替策として **ビルドツールの proxy 機能**を使うとサーバー側の変更が不要になる。
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://app.example.com", "https://staging.example.com"],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["X-Request-Id"],
-    max_age=86400,
-)
+### Vite の proxy 設定
 
-@app.get("/api/data")
-def get_data():
-    return {"message": "CORSが許可されたレスポンス"}
+```typescript
+// vite.config.ts
+export default defineConfig({
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        // /api/users → http://localhost:8080/api/users
+      },
+    },
+  },
+});
 ```
 
-## よくある落とし穴
+フロントから `/api/users` にリクエストすると、Vite の dev server が同一オリジンとしてリクエストを受け、バックエンドにプロキシする。ブラウザから見ると同一オリジン通信なので CORS は発生しない。
 
-### 1. `Access-Control-Allow-Origin: *` と `Credentials` の併用
+### 絶対にやってはいけない回避策
 
-`Allow-Origin: *` と `Allow-Credentials: true` は**同時に使えない**。ブラウザはこの組み合わせを明示的に拒否する。Credentials（Cookie等）を送る場合は、`Allow-Origin` に具体的なオリジンを指定する必要がある。
+`chrome.exe --disable-web-security --user-data-dir=/tmp/chrome` で Chrome の同一オリジンポリシーを無効化する手法は、**開発者自身のセッションを攻撃に晒す**ので絶対に使わない。Vite/webpack-dev-server の proxy か、サーバー側で `localhost` を許可する正攻法を使う。
 
-```javascript
-// ❌ ブラウザがエラーにする
-res.setHeader('Access-Control-Allow-Origin', '*');
-res.setHeader('Access-Control-Allow-Credentials', 'true');
+## COOP / COEP / CORP — クロスオリジン分離との関係
 
-// ✅ リクエストのOriginヘッダを検証して動的に設定
-const origin = req.headers.origin;
-if (allowedOrigins.includes(origin)) {
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-}
+CORS は「クロスオリジン通信を許可する」仕組みだが、近年は逆に「クロスオリジンとの分離をより厳格にする」ヘッダ群が追加されている。これらは **Spectre 等のサイドチャネル攻撃**への対策として導入された。
+
+| ヘッダ | 役割 |
+|--------|------|
+| `Cross-Origin-Opener-Policy` (COOP) | ブラウザのウィンドウグループを同一オリジンに限定し、`window.opener` 経由のクロスオリジンアクセスを遮断 |
+| `Cross-Origin-Embedder-Policy` (COEP) | iframe・画像などの埋め込みリソースに CORP / CORS を強制 |
+| `Cross-Origin-Resource-Policy` (CORP) | リソースを「同一オリジン / 同一サイト / クロスオリジン」のどこから埋め込み可能か宣言 |
+
+`SharedArrayBuffer` や `performance.measureUserAgentSpecificMemory()` のような高精度 API は、**COOP: same-origin** + **COEP: require-corp** が両方設定されたコンテキスト（クロスオリジン分離環境）でのみ利用可能。
+
+**重要な注意:** COOP と COEP は**ドキュメント側（HTML レスポンス）**に付与するヘッダ、CORP は**埋め込まれるリソース側（画像・スクリプト・フォント等のレスポンス）**に付与するヘッダで、適用箇所が異なる。
+
+```http
+# ドキュメント側（HTML を返すレスポンス）に付与
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
 ```
 
-### 2. `Vary: Origin` ヘッダの付け忘れ
-
-オリジンに応じて `Allow-Origin` の値を動的に変える場合、`Vary: Origin` を付けないとCDNやブラウザキャッシュが誤ったオリジンのレスポンスを返す。
-
-```
-# オリジンAへのレスポンスがキャッシュされ、
-# オリジンBのリクエストにもそのキャッシュが返される → CORSエラー
+```http
+# 画像・スクリプトなどリソース側のレスポンスに付与
+# （CDN や静的ファイル配信側の設定）
+Cross-Origin-Resource-Policy: same-site
 ```
 
-### 3. プリフライトが飛ぶ条件の誤解
+CORS が「許可の仕組み」なのに対し、これらは「分離の仕組み」であり、目的が逆方向。両方を理解しておくと「なぜ CORS を設定したのに `SharedArrayBuffer` が使えないのか」のような混乱を避けられる。
 
-「`Content-Type: application/json` にしただけでプリフライトが発生する」ことに気づかないケースが多い。開発時にネットワークタブを見て `OPTIONS` リクエストが飛んでいることを確認し、サーバーが正しく応答しているかチェックすべき。
+## Authorization ヘッダとプリフライト
 
-### 4. CORSをセキュリティの壁だと考える
+`Authorization` ヘッダを付与したリクエストは、**メソッドが GET であってもプリフライトが発生する**。これは `Authorization` が CORS の「単純ヘッダ」リストに含まれないため。
 
-CORSは**ブラウザの仕組み**であり、サーバーを保護するものではない。`curl` やサーバー間通信にはCORSの制約は存在しない。CORS設定だけで「不正なアクセスを防いでいる」と考えるのは危険。サーバー側での[[認証と認可]]は別途必須。
-
-### 5. `Access-Control-Allow-Origin` にオリジンをリスト指定する
-
-このヘッダには**1つのオリジンまたは `*`** しか指定できない。複数オリジンを許可するにはサーバー側でリクエストの `Origin` ヘッダを検証し、動的にレスポンスを返す必要がある。
-
-```javascript
-// ❌ 仕様違反（複数オリジン指定）
-res.setHeader('Access-Control-Allow-Origin',
-  'https://app.example.com, https://admin.example.com');
-
-// ✅ サーバー側で検証して動的に返す
-const origin = req.headers.origin;
-if (allowedOrigins.includes(origin)) {
-  res.setHeader('Access-Control-Allow-Origin', origin);
-}
+```typescript
+// このリクエストはプリフライトが飛ぶ
+fetch("https://api.example.com/me", {
+  headers: { Authorization: `Bearer ${token}` },
+});
 ```
 
-## AIによる実装のアンチパターン
-
-| アンチパターン | なぜ問題か | 対策 |
-|---|---|---|
-| `Allow-Origin: *` で全開放 | 認証付きリクエストで使えず、本番に持ち込むとセキュリティリスク | 環境変数で許可オリジンを管理し、本番では具体的なオリジンのみ許可 |
-| CORSミドルウェアとOPTIONSルートの二重定義 | プリフライトが2回処理されるか、片方が優先されて混乱 | フレームワークのCORS機能を使うか、ミドルウェアで一元管理 |
-| 全メソッド・全ヘッダを許可 | 必要最小限の原則に反し、攻撃面が不必要に広がる | 実際に使うメソッドとヘッダのみを許可 |
-| 開発用CORS設定を環境分岐なしに本番にデプロイ | `localhost:3000` や `*` が本番で許可される | 環境変数で `ALLOWED_ORIGINS` を管理 |
+サーバー側ではプリフライト応答に `Access-Control-Allow-Headers: Authorization` を含める必要がある。トピックの基本例ではこれが含まれているが、自前で CORS ミドルウェアを書く場合に忘れがちなポイント。
 
 ## 関連トピック
 
-- [[ルーティングとミドルウェア]] — 親トピック。CORSはミドルウェアとして実装される代表例
-- [[HTTP-HTTPS]] — CORSはHTTPヘッダベースの仕組み。オリジンの定義にスキーム（http/https）が含まれる
-- [[認証と認可]] — `Allow-Credentials: true` との関係。CORS設定だけではサーバー保護にならない
-- [[API設計-REST-GraphQL]] — フロントエンドとバックエンドが異なるオリジンにデプロイされる場合にCORS設定が必須
+- [[CORS]] — Layer 6 トピック。CORS の概念・基本フロー・主要フレームワーク実装の包括的解説
+- [[CSRF]] — CORS はリクエスト送信を止めないため CSRF 対策にはならない
+- [[ルーティングとミドルウェア]] — CORS はミドルウェアとして実装される代表例
+- [[認証と認可]] — `Allow-Credentials` と Cookie 認証・Bearer 認証の関係
