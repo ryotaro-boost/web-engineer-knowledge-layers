@@ -206,9 +206,12 @@ GET /api/users?page=2 HTTP/1.1        ← リクエストライン
 Host: api.example.com                  ← ヘッダ
 Accept: application/json
 Authorization: Bearer eyJhbGc...
+User-Agent: Mozilla/5.0 ...            ← クライアントの自己申告情報
                                        ← 空行（ヘッダとボディの区切り）
                                        ← ボディ（GETでは通常なし）
 ```
+
+リクエストヘッダのうち、[[User-Agentと生成AIクローラー|User-Agent]]はクライアントのソフトウェア情報をサーバーに伝える。ブラウザ・検索エンジンボット・生成AIクローラーがそれぞれ異なるUA文字列を送信し、サーバーはこれに基づいてコンテンツの出し分けやアクセス制御を行う。
 
 ```
 HTTP/1.1 200 OK                        ← ステータスライン
