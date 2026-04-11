@@ -46,17 +46,22 @@ graph TB
 
     Internet <--> IGW
 
-    subgraph VPC["VPC  10.0.0.0/16"]
-        subgraph PubSub["パブリックサブネット<br>10.0.1.0/24"]
+    subgraph VPC["VPC"]
+        VPCCIDR["10.0.0.0/16"]:::cidr
+        subgraph PubSub["パブリックサブネット"]
+            PubCIDR["10.0.1.0/24"]:::cidr
             ALB["ALB<br>ロードバランサー"]
             NATGW["NAT Gateway"]
         end
-        subgraph PrivSub["プライベートサブネット<br>10.0.10.0/24"]
+        subgraph PrivSub["プライベートサブネット"]
+            PrivCIDR["10.0.10.0/24"]:::cidr
             ECS["ECS Tasks<br>(コンテナ)"]
             RDS["RDS<br>(データベース)"]
         end
-        PrivSub -->|"NAT 経由で<br>外向き通信"| NATGW
+        PrivSub -->|"NAT 経由で外向き通信"| NATGW
     end
+
+    classDef cidr fill:none,stroke:none,color:#666,font-size:12px
 
     IGW --- PubSub
 
