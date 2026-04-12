@@ -260,6 +260,93 @@ $service = new OrderService(new FakeGateway());
 $service = new OrderService(new StripeGateway());
 ```
 
+### DIP — Go のインターフェースによる暗黙的な依存性逆転
+
+Go では `implements` キーワードなしに、メソッドセットが一致すれば自動的にインターフェースを満たす（暗黙的実装）。これにより、インターフェースを**利用側が定義する**のが自然になり、DIP が言語レベルで促進される。
+
+```go
+package order
+
+import "context"
+
+// 利用側（上位モジュール）がインターフェースを定義する
+// 実装側のパッケージを import する必要がない
+type PaymentGateway interface {
+	Charge(ctx context.Context, amount int, currency string) error
+}
+
+type OrderService struct {
+	payment PaymentGateway
+}
+
+func NewOrderService(pg PaymentGateway) *OrderService {
+	return &OrderService{payment: pg}
+}
+
+func (s *OrderService) Checkout(ctx context.Context, total int) error {
+	return s.payment.Charge(ctx, total, "jpy")
+}
+```
+
+```go
+package stripe
+
+import "context"
+
+// stripe パッケージは order.PaymentGateway を知らない
+// メソッドシグネチャが一致するだけで自動的にインターフェースを満たす
+type Client struct {
+	apiKey string
+}
+
+func NewClient(apiKey string) *Client {
+	return &Client{apiKey: apiKey}
+}
+
+func (c *Client) Charge(ctx context.Context, amount int, currency string) error {
+	// Stripe固有の実装
+	return nil
+}
+```
+
+### DIP — Python の Protocol による構造的部分型
+
+Python 3.8+ の `Protocol` を使うと、Go と同様に暗黙的なインターフェース準拠を型チェッカーで検証できる。
+
+```python
+from typing import Protocol
+
+# 利用側が Protocol（インターフェース）を定義
+class PaymentGateway(Protocol):
+    def charge(self, amount: int, currency: str) -> None: ...
+
+class OrderService:
+    def __init__(self, payment: PaymentGateway) -> None:
+        self._payment = payment
+
+    def checkout(self, total: int) -> None:
+        self._payment.charge(total, "jpy")
+
+# 実装側は Protocol を明示的に継承しなくてよい
+# charge(int, str) -> None を持っていれば型チェックを通過する
+class StripeGateway:
+    def __init__(self, api_key: str) -> None:
+        self._api_key = api_key
+
+    def charge(self, amount: int, currency: str) -> None:
+        ...  # Stripe固有の実装
+
+class FakeGateway:
+    def __init__(self) -> None:
+        self.charges: list[tuple[int, str]] = []
+
+    def charge(self, amount: int, currency: str) -> None:
+        self.charges.append((amount, currency))
+
+# テスト時: OrderService(FakeGateway())
+# 本番:     OrderService(StripeGateway("sk_..."))
+```
+
 ### SOLID原則の関係性
 
 ```mermaid
