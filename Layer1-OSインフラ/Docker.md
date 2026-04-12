@@ -27,11 +27,11 @@ Dockerがなかった時代の問題：
 
 **課題:** アプリケーションの動作環境を「コードと一緒に」バージョン管理したい。
 
-**解決:** [[Dockerイメージ]]（Image）は、OS・ランタイム・ライブラリ・アプリコード・設定の全てを1つのパッケージにまとめる。`Dockerfile` というテキストファイルで宣言的に定義するため、バージョン管理できる。
+**解決:** [[Dockerイメージ]]は、OS・ランタイム・ライブラリ・アプリコード・設定の全てを1つのパッケージにまとめる。`Dockerfile` というテキストファイルで宣言的に定義するため、バージョン管理できる。
 
 ```dockerfile
 # Dockerfileの例：Node.jsアプリケーション
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app
 COPY package*.json ./
@@ -91,10 +91,10 @@ block-beta
 
 **課題:** 似たような環境のイメージを何個も作ると、ストレージが無駄になる。ビルドも毎回全てやり直すと遅い。
 
-**解決:** Dockerイメージはレイヤー（Layer）の積み重ねで構成される。`Dockerfile` の各命令（`FROM`, `RUN`, `COPY` など）が1つのレイヤーを生成し、変更がないレイヤーはキャッシュから再利用される。
+**解決:** [[Dockerイメージ]]はレイヤー（Layer）の積み重ねで構成される。`Dockerfile` の各命令（`FROM`, `RUN`, `COPY` など）が1つのレイヤーを生成し、変更がないレイヤーはキャッシュから再利用される。
 
 ```dockerfile
-FROM node:20-slim          # レイヤー1: ベースイメージ（共有可能）
+FROM node:22-slim          # レイヤー1: ベースイメージ（共有可能）
 COPY package*.json ./      # レイヤー2: 依存定義
 RUN npm ci                 # レイヤー3: 依存インストール（package.jsonが変わらない限りキャッシュ）
 COPY . .                   # レイヤー4: アプリコード（頻繁に変更）
@@ -175,13 +175,13 @@ volumes:
 | マルチステージビルドでビルド環境と実行環境を分離 | ビルドツール（gcc, make等）が本番イメージに残る |
 | `.dockerignore` で不要ファイルを除外 | `node_modules/`, `.git/`, `.env` がイメージに含まれる |
 | 特定バージョンのタグを指定 | `FROM node:latest` で再現性がない |
-| 非rootユーザーで実行（`USER node`） | rootのまま実行して攻撃表面を広げる |
+| 非rootユーザーで実行（`USER node`） | root のまま実行して攻撃表面を広げる |
 
 ### マルチステージビルドの例
 
 ```dockerfile
 # ステージ1: ビルド
-FROM node:20 AS builder
+FROM node:22 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -189,7 +189,7 @@ COPY . .
 RUN npm run build
 
 # ステージ2: 実行（ビルドツール不要）
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
@@ -262,7 +262,7 @@ docker compose down -v
 
 ```dockerfile
 # syntax=docker/dockerfile:1
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 RUN corepack enable
 WORKDIR /app
 
