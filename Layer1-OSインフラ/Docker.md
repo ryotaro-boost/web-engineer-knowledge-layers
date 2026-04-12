@@ -313,4 +313,4 @@ docker stats
 
 - コンテナは「プロセスの隔離」という点で [[プロセスとスレッド]] の延長線上にある。まずプロセスの仕組みを理解してからDockerを学ぶと、なぜこの技術が生まれたかが自然に理解できる
 - Kubernetes（K8s）はDockerコンテナの「オーケストレーション」を担うが、まずは単体のDockerとDocker Composeを十分に使いこなしてから学ぶべき
-- Windows/macOSでDockerを動かす場合、内部的にはLinux VMが動いている（Docker Desktop）。これはコンテナがLinuxカーネルの機能に依存しているため
+- Windows/macOSでDockerを動かす場合、内部的にはLinux VMが動いている（Docker Desktop）。これはコンテナがLinuxカーネルの機能に依存しているため。Windowsでは[[WSL2とDocker|WSL2]]がDocker Desktopの標準バックエンドとなっており、ファイル配置場所によるパフォーマンス差に注意が必要
