@@ -61,7 +61,7 @@ DynamoDBのパーティションキー設計がその典型で、データのア
 
 | 選択 | 特徴 | 例 |
 |------|------|-----|
-| CP | 分断時に一部リクエストを拒否してでもデータの一貫性を守る | MongoDB（デフォルト）, HBase, Redis Cluster |
+| CP | 分断時に一部リクエストを拒否してでもデータの一貫性を守る | MongoDB（デフォルト）, HBase, etcd |
 | AP | 古いデータを返してでも応答し続ける | Cassandra, DynamoDB（結果整合性モード）, CouchDB |
 
 ### 4. 結果整合性（Eventual Consistency）
@@ -194,20 +194,36 @@ r.incr('page:home:views')  # 2
 
 ### MongoDB — ドキュメントDBの基本操作
 
-```javascript
-const { MongoClient } = require('mongodb');
+```typescript
+import { MongoClient, type Document } from "mongodb";
 
-const client = new MongoClient('mongodb://localhost:27017');
-const db = client.db('shop');
-const orders = db.collection('orders');
+const client = new MongoClient("mongodb://localhost:27017");
+const db = client.db("shop");
+
+interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  qty: number;
+}
+
+interface Order {
+  userId: string;
+  status: string;
+  items: OrderItem[];
+  total: number;
+  createdAt: Date;
+}
+
+const orders = db.collection<Order>("orders");
 
 // ドキュメントの挿入（埋め込み設計）
 await orders.insertOne({
-  userId: 'user123',
-  status: 'shipped',
+  userId: "user123",
+  status: "shipped",
   items: [
-    { productId: 'p001', name: 'キーボード', price: 8000, qty: 1 },
-    { productId: 'p002', name: 'マウス', price: 3000, qty: 2 },
+    { productId: "p001", name: "キーボード", price: 8000, qty: 1 },
+    { productId: "p002", name: "マウス", price: 3000, qty: 2 },
   ],
   total: 14000,
   createdAt: new Date(),
@@ -215,15 +231,17 @@ await orders.insertOne({
 
 // ユーザーの注文を1回のクエリで取得（JOINなし）
 const userOrders = await orders
-  .find({ userId: 'user123' })
+  .find({ userId: "user123" })
   .sort({ createdAt: -1 })
   .toArray();
 
 // 集計パイプライン — ユーザーごとの合計金額
-const result = await orders.aggregate([
-  { $group: { _id: '$userId', totalSpent: { $sum: '$total' } } },
-  { $sort: { totalSpent: -1 } },
-]).toArray();
+const result = await orders
+  .aggregate<{ _id: string; totalSpent: number }>([
+    { $group: { _id: "$userId", totalSpent: { $sum: "$total" } } },
+    { $sort: { totalSpent: -1 } },
+  ])
+  .toArray();
 ```
 
 ### DynamoDB — シングルテーブル設計の例
