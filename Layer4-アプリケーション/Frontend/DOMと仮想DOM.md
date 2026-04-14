@@ -199,7 +199,7 @@ Reactの差分検出アルゴリズムは、ツリーの完全な比較（O(n³)
   - [[アクセシビリティ]] — 仮想DOMの差分更新は、スクリーンリーダーのフォーカス管理に影響する。不用意なDOM再構築でフォーカスが失われる問題がある
 - **上位レイヤーとの関係:**
   - [[Layer5-パフォーマンス/_index|パフォーマンス]]（Layer 5）— Core Web VitalsのINP（Interaction to Next Paint）は、仮想DOMの更新効率に直結する。不要な再レンダリングはINPを悪化させる
-  - [[Layer6-セキュリティ/_index|セキュリティ]]（Layer 6）— Reactの仮想DOMは `textContent` としてレンダリングするため、デフォルトで[[SQLインジェクションとXSS|XSS]]を防ぐ。`dangerouslySetInnerHTML` はこの保護を無効にする
+  - [[Layer6-セキュリティ/_index|セキュリティ]]（Layer 6）— Reactは子要素の文字列を `document.createTextNode` でテキストノードとして挿入するため、HTMLとして解釈されずデフォルトで[[SQLインジェクションとXSS|XSS]]を防ぐ。`dangerouslySetInnerHTML` はこの保護を無効にする
 
 ## 誤解されやすいポイント
 
