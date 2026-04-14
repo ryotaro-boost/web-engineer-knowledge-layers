@@ -89,7 +89,7 @@ graph TD
 | ファイルアップロード | 標準的（multipart） | 仕様外（別途対応が必要） |
 | エラーハンドリング | HTTPステータスコードで表現 | 慣習的に常に200を返し、`errors`フィールドで表現（仕様上の強制ではない） |
 | リアルタイム | [[WebSocket]]等を別途実装 | Subscription で統合的に対応 |
-| ツールエコシステム | 成熟（[[OpenAPIとスキーマ駆動開発]]） | 成長中（GraphiQL, Apollo Studio） |
+| ツールエコシステム | 成熟（[[OpenAPIとスキーマ駆動開発]]、内部文法は [[JSON-Schema\|JSON Schema]]） | 成長中（GraphiQL, Apollo Studio） |
 
 ## 他の仕組みとどう関係するか
 
