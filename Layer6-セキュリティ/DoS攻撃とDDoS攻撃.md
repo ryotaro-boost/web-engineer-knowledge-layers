@@ -92,7 +92,7 @@ flowchart TD
 | UDP/ICMP Flood | ◎ | △ | × | 易 | ISP / CDN 上流 |
 | SYN Flood | △ | ◎ | △ | 中 | OS / FW / LB |
 | 増幅攻撃 | ◎ | × | × | 易 | ISP / CDN 上流 |
-| HTTP Flood | △ | ○ | ◎ | 難 | WAF / [[レート制限]] |
+| HTTP Flood | △ | ○ | ◎ | 難 | [[WAF]] / [[レート制限]] |
 | Slowloris | × | ◎ | × | 難 | アプリサーバー設定 |
 | 重いクエリ濫用 | × | △ | ◎ | 難 | アプリ層 / API Gateway |
 
@@ -179,7 +179,7 @@ flowchart TD
 | 階層 | 主な対策 | 担当 | 効く攻撃タイプ |
 |------|---------|------|---------------|
 | **ネットワーク（L3/L4）** | Anycast 分散、ISP/上流のスクラビング、BGP Flowspec、SYN Cookie | CDN / 通信事業者 | 帯域型・増幅攻撃・SYN Flood |
-| **アプリケーション（L7）** | WAF、Bot 検知、JS チャレンジ、CAPTCHA | CDN / WAF | HTTP Flood・Bot |
+| **アプリケーション（L7）** | [[WAF]]、Bot 検知、JS チャレンジ、CAPTCHA | CDN / WAF | HTTP Flood・Bot |
 | **認証・APIゲート** | レート制限、IP/ASN 評価、行動分析 | API Gateway / アプリ | API 濫用・低速攻撃 |
 | **アプリ・運用** | オートスケール、グレースフルデグラデーション、ランブック整備 | SRE | キャパシティ枯渇全般 |
 
