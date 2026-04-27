@@ -89,7 +89,7 @@ sequenceDiagram
 
 ## PKCE — パブリッククライアントの保護
 
-SPA（シングルページアプリケーション）やモバイルアプリは `client_secret` を安全に保持できない（ソースコードに埋め込むと閲覧可能）。**PKCE**（Proof Key for Code Exchange、「ピクシー」と読む）はこの問題を解決する。
+SPA（シングルページアプリケーション）やモバイルアプリは `client_secret` を安全に保持できない（ソースコードに埋め込むと閲覧可能）。**PKCE**（Proof Key for Code Exchange、「ピクシー」と読む）はこの問題を解決する（詳細は [[PKCEフロー]] を参照）。
 
 ```mermaid
 sequenceDiagram
