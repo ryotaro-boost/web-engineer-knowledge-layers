@@ -7,7 +7,7 @@ created: 2026-04-29
 
 # Python（Python）
 
-> **一言で言うと:** Python は1991年に **Guido van Rossum** が「**読みやすさ**」を最重視して設計した汎用言語で、**「There should be one — and preferably only one — obvious way to do it」（やり方は一つ、できれば一つだけ）** という Zen of Python の哲学が言語と文化を貫く。長らく**GIL（Global Interpreter Lock）**による CPU 並列性の制約が弱点だったが、PEP 703 によって 2025年10月の **Python 3.14 で free-threaded build が正式サポート（GIL を実行時にオフにできる）** され、30年来の制約が解消されつつある。型ヒント（PEP 484, 2014）の成熟と、Rust 製の **uv**（pip 代替、10〜100倍高速）の台頭で、エコシステムも近代化が進む。
+> **一言で言うと:** Python は1991年に **Guido van Rossum** が「**読みやすさ**」を最重視して設計した汎用言語で、**「There should be one — and preferably only one — obvious way to do it」（やり方は一つ、できれば一つだけ）** という Zen of Python の哲学が言語と文化を貫く。長らく**GIL（Global Interpreter Lock）**による CPU 並列性の制約が弱点だったが、**PEP 703（GIL オプション化、3.13 で実験的導入）**と**PEP 779（Phase II 公式サポートの判定基準）**によって、2025年10月の **Python 3.14 で free-threaded build が正式サポート（experimental タグ削除）** され、30年来の制約が解消されつつある。型ヒント（PEP 484, 2014）の成熟と、Rust 製の **uv**（pip 代替、10〜100倍高速）の台頭で、エコシステムも近代化が進む。
 
 ## 誕生と歴史的経緯
 
@@ -22,10 +22,10 @@ timeline
     2015 : asyncio 標準化 (Python 3.4-3.5)<br/>async/await構文
     2018 : Guido が BDFL 退任<br/>Steering Council 体制へ
     2020 : Python 2 のサポート終了<br/>3 への移行完了
-    2022 : Python 3.11<br/>Faster CPython プロジェクト 25% 高速化
+    2022 : Python 3.11<br/>Faster CPython プロジェクト 平均 1.25x（〜25%）高速化
     2024-02 : uv 0.1.0 (Astral)<br/>Rust製の高速パッケージマネージャ
-    2024-10 : Python 3.13<br/>free-threaded build 実験的サポート
-    2025-10 : Python 3.14<br/>free-threaded 正式サポート(Phase II)<br/>シングルスレッド性能ペナルティ 5-10% に改善
+    2024-10 : Python 3.13<br/>free-threaded build 実験的サポート（PEP 703）
+    2025-10 : Python 3.14<br/>free-threaded 正式サポート(Phase II、PEP 779)<br/>シングルスレッド性能ペナルティ 5-10% に改善
 ```
 
 ### 設計者と動機
@@ -68,7 +68,7 @@ timeline
 | 3.8 | 2019 | walrus operator (`:=`)、TypedDict |
 | 3.9 | 2020 | dict 結合演算子 (`|`)、ジェネリクス組み込み (`list[int]`) |
 | 3.10 | 2021 | **Structural Pattern Matching**（match 文） |
-| 3.11 | 2022 | **Faster CPython** で 10-60% 高速化、`Self` 型 |
+| 3.11 | 2022 | **Faster CPython** でアプリにより 10-60%（平均 1.25x = 〜25%）高速化、`Self` 型 |
 | 3.12 | 2023 | f-string 制限緩和、ジェネリクス簡略化 (`def f[T](x: T)`) |
 | 3.13 | 2024-10 | **free-threaded build 実験的、JIT 実験的** |
 | **3.14** | **2025-10** | **free-threaded 正式サポート、JIT 改善、パターンマッチ拡張** |
@@ -163,7 +163,7 @@ def first[T](items: list[T]) -> T:
     return items[0]
 ```
 
-**型ヒントはランタイムでチェックされない**。実行時の型情報は単なる注釈であり、`mypy` / `Pyright`（[[TypeScript]] と同じ Microsoft 製）/ `ty`（Astral 製）などの**静的解析ツール**で検証する。
+**型ヒントはランタイムでチェックされない**。実行時の型情報は単なる注釈であり、`mypy` / `Pyright`（[[TypeScript]] と同じ Microsoft 製）/ `ty`（Astral 製、2025-12 発表、Beta 段階）などの**静的解析ツール**で検証する。
 
 詳細は[[Pythonの型ヒントと静的解析]]（今後作成予定）。
 
@@ -226,8 +226,8 @@ CPython（標準実装）は**いかなる瞬間も単一スレッドのみが P
 
 | Phase | バージョン | 状況 |
 |-------|----------|------|
-| Phase I | 3.13 (2024-10) | free-threaded build が**実験的**に提供。シングルスレッド性能 -40% |
-| **Phase II** | **3.14 (2025-10)** | **free-threaded が正式サポート（experimental の表記なし）。性能ペナルティ -5〜10% に改善** |
+| Phase I | 3.13 (2024-10) | free-threaded build が**実験的**に提供（PEP 703）。シングルスレッド性能に大きなペナルティ（おおよそ -40% 程度と報告） |
+| **Phase II** | **3.14 (2025-10)** | **PEP 779 の判定基準を満たし、free-threaded が正式サポート（experimental の表記なし）。性能ペナルティ -5〜10% に改善** |
 | Phase III | 3.15-3.17 (2026-2027 予定) | デフォルトビルドが free-threaded に |
 | 完全移行 | 未定 | GIL 完全廃止、ABI も統一 |
 
@@ -509,13 +509,13 @@ graph TD
     NUM --> SK[scikit-learn<br/>機械学習]
     NUM --> TF[TensorFlow / PyTorch<br/>深層学習]
 
-    PD --> POL[Polars<br/>Rust製、高速]
+    NUM -.->|"代替候補"| POL[Polars<br/>Rust製、独立実装]
 
     style NUM fill:#bbdefb
     style POL fill:#fff9c4
 ```
 
-データ・ML 領域では Python が事実上の標準。**Polars（Rust 製の Pandas 代替）が高速性で注目**されている。
+データ・ML 領域では Python が事実上の標準。**Polars（Rust 製、Pandas からの派生ではなく独立実装）が高速性と表現力で注目**され、新規プロジェクトでは第一選択候補にもなりつつある。
 
 ### 開発ツール — Ruff の革命
 
@@ -526,7 +526,7 @@ $ ruff check .   # 静的チェック（flake8 + isort + pyupgrade ... の統合
 $ ruff format .  # フォーマット（Black 互換）
 ```
 
-**従来ツール（flake8/isort/Black/pyupgrade）の 10〜100倍高速**。1つの設定で全てを賄える。Pythonエコシステムの「Astral 革命」（Ruff + uv + ty）が進行中。
+**従来ツール（flake8/isort/Black/pyupgrade）の 10〜100倍高速**。1つの設定で全てを賄える。Pythonエコシステムの「Astral 革命」（Ruff + uv + ty）が進行中（ty は 2025-12 発表、2026 時点では Beta 段階）。
 
 ## よくある落とし穴
 

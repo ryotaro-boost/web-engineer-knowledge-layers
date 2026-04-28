@@ -7,7 +7,7 @@ created: 2026-04-29
 
 # Rust（Rust）
 
-> **一言で言うと:** Rust は2006年に **Graydon Hoare** が Mozilla で個人プロジェクトとして開発を始め、「**ガベージコレクションなしでメモリ安全**」という不可能と思われた目標を実現した言語。**所有権（Ownership）・借用（Borrowing）・ライフタイム（Lifetimes）** という3つの仕組みでメモリ安全とデータ競合フリーをコンパイル時に保証する。Stack Overflow の年次調査で **8年連続「最も愛される言語」** に選ばれ、近年は Web 領域で **SWC・Turbopack・Biome・Ruff・uv・ty**（[[Python]] / [[JavaScript]] エコシステムを置き換える Rust 製ツール群）として爆発的に普及した。**Cloudflare Workers の標準言語**の一つでもあり、Wasm でブラウザ・エッジ・組込みまでカバーする「**システムプログラミングの民主化**」を実現した。Rust 1.85（2025-02）で 2024 Edition が安定化、async closure・improved lifetime capture が入った。
+> **一言で言うと:** Rust は2006年に **Graydon Hoare** が Mozilla で個人プロジェクトとして開発を始め、「**ガベージコレクションなしでメモリ安全**」という不可能と思われた目標を実現した言語。**所有権（Ownership）・借用（Borrowing）・ライフタイム（Lifetimes）** という3つの仕組みでメモリ安全とデータ競合フリーをコンパイル時に保証する。Stack Overflow の年次調査で **2016〜2022年は7年連続「最も愛される言語（most loved）」、2023年以降も「最も賞賛される言語（most admired）」として継続的に1位** に選ばれ、近年は Web 領域で **SWC・Turbopack・Biome・Ruff・uv・ty**（[[Python]] / [[JavaScript]] エコシステムを置き換える Rust 製ツール群）として爆発的に普及した。**Cloudflare Workers の標準言語**の一つでもあり、Wasm でブラウザ・エッジ・組込みまでカバーする「**システムプログラミングの民主化**」を実現した。Rust 1.85（2025-02）で 2024 Edition が安定化、async closure・improved lifetime capture が入った。
 
 ## 誕生と歴史的経緯
 
@@ -22,8 +22,8 @@ timeline
     2018 : Rust 2018 Edition<br/>NLL（Non-Lexical Lifetimes）・モジュールシステム改善
     2018 : Cloudflare Workersが採用<br/>Dropbox / AWS Firecracker / Discordも
     2020 : Mozilla がレイオフ・<br/>Rust Foundation 設立<br/>(AWS/Microsoft/Google/Huawei等が支援)
-    2021 : Linux カーネルに採用決定<br/>Rust 2021 Edition
-    2022 : Linux 6.1 でRustサポート正式化<br/>WindowsカーネルにもRust導入開始
+    2021 : Rust 2021 Edition
+    2022-12 : Linux 6.1 でRustサポート正式マージ<br/>(C 独占以来初の言語追加)<br/>WindowsカーネルにもRust導入開始
     2024 : SWC/Turbopack/Biome/Ruff/uv/ty<br/>Web ツール群でRust普及加速
     2025-02 : Rust 1.85 / 2024 Edition 安定化<br/>async closure・improved async lifetime
     2026 : async-trait crate を言語機能で代替<br/>generators 進行中
@@ -31,7 +31,7 @@ timeline
 
 ### 設計者と動機
 
-設計者の **Graydon Hoare**（カナダの計算機科学者）は、Mozilla の Researcher として勤務する傍ら、**2006年に個人プロジェクトとして Rust の設計を開始**。直接の契機は、**自宅アパートのエレベータが C++ で書かれた制御系のメモリバグで動かなくなった**ことだったと Hoare 自身が語っている。
+設計者の **Graydon Hoare**（カナダの計算機科学者）は、Mozilla の Researcher として勤務する傍ら、**2006年に個人プロジェクトとして Rust の設計を開始**。直接の契機は、**自宅アパート（バンクーバー、21階）のエレベータのソフトウェアがクラッシュして動かなくなり、階段を登りながら「多くのソフトウェアクラッシュはメモリ管理の問題に起因する」と考えた**ことだったと Hoare 自身が語っている（クラッシュしたソフトウェアの実装言語そのものは特定されていない）。
 
 Hoare の問題意識:
 
@@ -51,7 +51,7 @@ Hoare の問題意識:
 
 ### Linux カーネルと Windows での採用
 
-2022年、**Linux カーネル 6.1 で Rust が正式サポート**。これは Linux 史上**最大の言語追加**（C の独占以来初）で、Linus Torvalds が「メモリ安全性のために必要」と認めた歴史的決定。
+2022年10月のマージを経て、**2022年12月リリースの Linux 6.1 で Rust が正式サポート**された（Rust for Linux の RFC 提出は2020年、議論は数年に及んだ）。これは Linux 史上**最大の言語追加**（C の独占以来初）で、Linus Torvalds が「メモリ安全性のために必要」と認めた歴史的決定。
 
 Microsoft も同時期に **Windows のカーネルコンポーネントを Rust で書き直し**を開始。AWS は **Firecracker**（Lambda の仮想化技術）を Rust で実装。**システムプログラミングの新標準**として地位を確立した。
 

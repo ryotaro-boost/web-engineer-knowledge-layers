@@ -7,15 +7,16 @@ created: 2026-04-29
 
 # PHP（PHP: Hypertext Preprocessor）
 
-> **一言で言うと:** PHP は1994年に **Rasmus Lerdorf** が個人サイト（Personal Home Page）のフォーム処理用 CGI スクリプトとして書き始めた、**Web専用に進化した稀有な言語**。**Share-nothing アーキテクチャ**（リクエスト終了で全状態リセット）と **HTML への直接埋め込み構文** が、低レイヤーを意識せずに動的 Web を作れるようにし、WordPress を生んだ。長らく「使い捨て言語」「悪い書き方が蔓延」と批判されてきたが、**PHP 7（2015）で性能が2倍**、**PHP 8（2020）以降は JIT・型宣言・enum・match・property hooks**（8.4, 2024）など現代的な機能が次々追加され、**事実上の別言語に進化**した。それでも依然として**Webの約72%がPHPで動く**現実。
+> **一言で言うと:** PHP は1993〜1994年に **Rasmus Lerdorf** が個人サイト（Personal Home Page）のフォーム処理用 CGI スクリプトとして書き始め、**1995年6月8日に PHP Tools 1.0 として公開**された、**Web専用に進化した稀有な言語**。**Share-nothing アーキテクチャ**（リクエスト終了で全状態リセット）と **HTML への直接埋め込み構文** が、低レイヤーを意識せずに動的 Web を作れるようにし、WordPress を生んだ。長らく「使い捨て言語」「悪い書き方が蔓延」と批判されてきたが、**PHP 7（2015）で性能が2倍**、**PHP 8（2020）以降は JIT・型宣言・enum・match・property hooks**（8.4, 2024）など現代的な機能が次々追加され、**事実上の別言語に進化**した。それでも依然として**Webの約75%（W3Techs 2026年時点）がPHPで動く**現実。
 
 ## 誕生と歴史的経緯
 
 ```mermaid
 timeline
     title PHPの主要な転換点
-    1994 : Rasmus Lerdorf が個人サイト用<br/>"Personal Home Page Tools" 作成<br/>C製のCGIスクリプト集
-    1995 : PHP/FI 公開（Form Interpreter）<br/>HTML埋め込み構文
+    1993-1994 : Rasmus Lerdorf が個人サイト用<br/>"Personal Home Page Tools" を C で開発<br/>CGIスクリプト集
+    1995-06-08 : PHP Tools 1.0 公開<br/>(comp.infosystems.www.authoring.cgi)
+    1996 : PHP/FI 統合（Forms Interpreter）<br/>HTML埋め込み構文
     1997 : Andi Gutmans/Zeev Suraski が<br/>パーサーを書き直し（PHP 3）
     2000 : PHP 4 / Zend Engine<br/>本格的言語仕様の確立
     2004 : PHP 5 / Zend Engine 2<br/>OOP本格対応
@@ -31,7 +32,7 @@ timeline
 
 ### 設計者と動機
 
-設計者の **Rasmus Lerdorf**（デンマーク系カナダ人エンジニア）は、自分の履歴書を Web 上に置くために、**1994年**に CGI スクリプトを書いた。これが評判となり「Personal Home Page Tools」として公開、後に「PHP/FI」（Form Interpreter）と呼ばれるようになった。
+設計者の **Rasmus Lerdorf**（デンマーク系カナダ人エンジニア）は、自分の履歴書を Web 上に置くために、**1993〜1994年**に C で CGI スクリプトを書き始めた。これを **1995年6月8日に「PHP Tools 1.0」として公開**（comp.infosystems.www.authoring.cgi にて）、その後「Forms Interpreter（FI）」として書き直し、**1996年に両者を統合した「PHP/FI」** が登場した。
 
 Lerdorf 自身が後に語っている重要な事実:
 
@@ -599,7 +600,7 @@ $country = $user?->address?->country;  // 途中が null なら null
 ## 学習メモ
 
 - 「PHP は古臭い」という評価は **PHP 5 時代の知識で止まっている**ケースがほとんど。PHP 8.4 + Laravel 11 + PHPStan の組み合わせは、[[TypeScript]] や [[Python]]（FastAPI）に劣らない現代的な開発体験
-- **Web の 72% で動く**という現実は無視できない。新規プロジェクトで選ぶかは別として、レガシーアプリの保守・改修・移行案件は今後10年以上発生し続ける
+- **Web の約75%（W3Techs 2026 時点）で動く**という現実は無視できない。新規プロジェクトで選ぶかは別として、レガシーアプリの保守・改修・移行案件は今後10年以上発生し続ける
 - **WordPress と Laravel/Symfony は同じ言語で書かれた別世界**。WordPress プラグイン開発と Laravel エンタープライズ開発は、求められるスキルが大きく違う
 - **Share-Nothing アーキテクチャ**は永続プロセス時代になっても根深い影響を残している。Laravel Octane（永続プロセス）で動かすと、Share-Nothing 前提のコード（グローバル状態を毎回初期化）がバグの原因になる
 - AI コード生成が苦手とする領域: 「**バージョンに応じた書き方**」（PHP 5 と PHP 8 で別言語並みに違う）、「**WordPress vs モダン PHP の文脈の使い分け**」。生成されたコードがどの時代のスタイルかを人間が判断する必要がある

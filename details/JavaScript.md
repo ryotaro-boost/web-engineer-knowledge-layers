@@ -89,7 +89,7 @@ Stage 3 まで進めば多くのエンジンが先行実装する。Babel/TypeSc
 | RegExp `.escape` | 文字列を正規表現で安全に使うエスケープ |
 | `Promise.try` | 同期/非同期コードを Promise に統一して扱える |
 | Duplicate Named Capture Groups | 異なる選択肢で同名キャプチャグループを使える |
-| Float16Array（2026 Stage 4） | 半精度浮動小数点の型付き配列 |
+| Float16Array | 半精度浮動小数点の型付き配列（ES2025 で Stage 4 到達） |
 
 参考: [[ECMAScriptの年次リリースとTC39プロセス]]（今後作成予定）
 

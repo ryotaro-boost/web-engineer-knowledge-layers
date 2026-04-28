@@ -7,7 +7,7 @@ created: 2026-04-29
 
 # TypeScript（TypeScript）
 
-> **一言で言うと:** TypeScriptはJavaScriptに「ビルド時の静的型チェック」を後付けした言語で、JSの巨大エコシステムを活かしながら大規模開発の保守性を担保するために生まれた。**JSのスーパーセット**・**Gradual typing**・**構造的部分型**という3つの設計判断が言語の世界観を決め、トランスパイル後はただのJSとして動く（実行時の型保証はない）。2025年3月に Anders Hejlsberg がコンパイラのGo書き直し（TypeScript 7 / Corsa）を発表し、10倍高速化が現実になった。
+> **一言で言うと:** TypeScriptはJavaScriptに「ビルド時の静的型チェック」を後付けした言語で、JSの巨大エコシステムを活かしながら大規模開発の保守性を担保するために生まれた。**JSのスーパーセット**・**Gradual typing**・**構造的部分型**という3つの設計判断が言語の世界観を決め、トランスパイル後はただのJSとして動く（実行時の型保証はない）。2025年3月に Anders Hejlsberg がコンパイラのGo書き直し（TypeScript 7 / Corsa）を発表し、**2026年4月21日に TypeScript 7.0 Beta が `@typescript/native-preview`（tsgo）として公開**された。約10倍の高速化が現実になりつつある。
 
 ## 誕生と歴史的経緯
 
@@ -23,7 +23,7 @@ timeline
     2023 : 5.0 Decorators Stage3<br/>ESM/Bundlerエコシステムと統合
     2024 : 5.7 (Nov) / 改善された<br/>エラー報告
     2025 : 5.8 (Mar) / require ESM<br/>TypeScript 7 (Go) 発表・プレビュー開始
-    2026 : tsgo VS Code 拡張<br/>10倍高速ビルド・編集体験
+    2026-04 : TypeScript 7.0 Beta 公開<br/>tsgo（Go版コンパイラ）配布開始<br/>約10倍高速ビルド
 ```
 
 ### 設計者と動機
@@ -53,7 +53,7 @@ Microsoft は3番を選んだ。これにより**既存の JS コードはその
 | 5.0 (2023) | Decorators Stage 3 準拠、`const` type parameters |
 | 5.7 (2024-11) | エラーメッセージ改善 |
 | 5.8 (2025-03) | `require()` で ESM を読める、`--module node18` 安定化 |
-| **7.0 (2026予定)** | **コンパイラを Go で書き直し（Corsa）。10倍高速化** |
+| **7.0 Beta (2026-04)** | **コンパイラを Go で書き直し（Corsa）、`@typescript/native-preview`（tsgo）として公開、約10倍高速化** |
 
 ## 設計思想
 
@@ -418,12 +418,12 @@ graph LR
 
 2025年3月、**Microsoft 公式が tsc を Go で書き直す**ことを発表。Hejlsberg 自ら陣頭指揮:
 
-- VS Code（150万行）の型チェックが **89秒 → 8.74秒（10.2倍）**
+- VS Code（約150万行）の型チェックが **約77.8秒 → 約7.5秒（10.4倍）**
 - 小規模プロジェクトでも 2-5倍高速化
-- 2026前半に VS Code 拡張として opt-in 提供予定
+- **2026年4月21日に TypeScript 7.0 Beta が公開**（`@typescript/native-preview` パッケージとして配布、コマンドは `tsgo`）
 - 既存の型システムは完全互換（書き直しは実装のみ）
 
-「**tsc は遅いから別ツールで補う**」というエコシステムの前提が、Microsoft 自身によって解消されつつある。今後数年で `tsc-go`（または `tsgo`）への移行が進む見込み。
+「**tsc は遅いから別ツールで補う**」というエコシステムの前提が、Microsoft 自身によって解消されつつある。今後 `tsgo` への移行が進む見込み。
 
 ## エコシステムとtsconfig
 

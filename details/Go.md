@@ -21,9 +21,9 @@ timeline
     2015 : context パッケージ標準化<br/>キャンセル伝播の標準API
     2018 : Go modules 導入 (1.11)<br/>GOPATH 時代の終わり
     2022 : Generics (1.18)<br/>型パラメータ追加・10年越しの議論決着
-    2023 : Range over function (1.23)<br/>カスタムイテレータ
-    2024 : 1.22 / Range over int<br/>net/http ルーティング改善
-    2025-02 : 1.24 / Generic type aliases<br/>Swiss Tables maps (60%高速化)
+    2024-02 : 1.22 / Range over int<br/>net/http ルーティング改善
+    2024-08 : 1.23 / Range over function<br/>カスタムイテレータ
+    2025-02 : 1.24 / Generic type aliases<br/>Swiss Tables maps (用途により30〜60%高速化)
     2025-08 : 1.25 / Green Tea GC (experimental)<br/>JSON v2 実験版
     2026-02 : 1.26 / Green Tea GC デフォルト化<br/>cgo 30%高速化・goroutine leak profile
 ```
@@ -65,7 +65,7 @@ Google 内部の問題意識（2007年時点）:
 | 1.21 | 2023 | `min`/`max`/`clear` 組み込み、`slices`/`maps`/`cmp` 標準ライブラリ |
 | 1.22 | 2024 | **Range over int**、net/http ルーティング強化 |
 | 1.23 | 2024 | **Range over function**（カスタムイテレータ） |
-| 1.24 | 2025-02 | Generic type aliases、Swiss Tables maps（60%高速化） |
+| 1.24 | 2025-02 | Generic type aliases、Swiss Tables maps（用途により30〜60%高速化） |
 | 1.25 | 2025-08 | Green Tea GC（実験的、10-40% GC オーバーヘッド削減） |
 | **1.26** | **2026-02** | **Green Tea GC デフォルト化、cgo 30%高速化、goroutine leak profile** |
 
