@@ -182,6 +182,158 @@ class User extends Model {
 }
 ```
 
+### Go での実践: 言語が継承を持たず、コンポジションを強制する
+
+[[Go]] は他の OOP 言語と決定的に違い、**そもそもクラスも継承も存在しない**。コードの再利用は3つの機構だけで行う:
+
+1. **構造体埋め込み**（Struct Embedding）— 匿名フィールドによる合成
+2. **メソッド昇格**（Method Promotion）— 埋め込んだ型のメソッドが外側の型から直接呼べる
+3. **インターフェース埋め込み**（Interface Embedding）— インターフェース同士を合成
+
+「コンポジションを優先せよ」という原則は他言語では選択だが、**Go ではこれが言語仕様によって強制される**。「`extends` を書こうとしても書けない」のが Go の独自性。
+
+#### 構造体埋め込みとメソッド昇格
+
+```go
+// 機能1: タイムスタンプ
+type Timestamps struct {
+    CreatedAt time.Time
+    UpdatedAt time.Time
+}
+
+func (t *Timestamps) Touch() {
+    t.UpdatedAt = time.Now()
+}
+
+// 機能2: ソフト削除
+type SoftDelete struct {
+    DeletedAt *time.Time
+}
+
+func (s *SoftDelete) Delete() {
+    now := time.Now()
+    s.DeletedAt = &now
+}
+
+// User は両方の機能を「埋め込み」で取り込む（フィールド名なし = 匿名フィールド）
+type User struct {
+    ID    int
+    Name  string
+    Timestamps  // ← 埋め込み（has-a だが書き味は継承的）
+    SoftDelete  // ← 埋め込み
+}
+
+func main() {
+    u := &User{ID: 1, Name: "Alice"}
+    u.Touch()   // Timestamps.Touch() が昇格していて直接呼べる
+    u.Delete()  // SoftDelete.Delete() も同様
+
+    // 内部的には委譲: u.Touch() ≡ u.Timestamps.Touch()
+    fmt.Println(u.Timestamps.UpdatedAt) // 明示的にもアクセス可能
+}
+```
+
+**ポイント**: 見た目は継承に似ているが、Go の埋め込みは**フィールドへの自動委譲のシンタックスシュガー**であり、is-a 関係ではない。`*User` は `*Timestamps` として渡せない（型が違う）。
+
+#### 同じ Repository パターンを Go で
+
+TypeScript で示した「Repository + Logger + Cache」のデコレータパターンは、Go では構造体埋め込みとインターフェースで自然に書ける:
+
+```go
+type UserRepository interface {
+    FindByID(ctx context.Context, id string) (*User, error)
+}
+
+// 実装
+type postgresUserRepo struct {
+    db *sql.DB
+}
+
+func (r *postgresUserRepo) FindByID(ctx context.Context, id string) (*User, error) {
+    // ...DBクエリ
+    return &User{}, nil
+}
+
+// ロギングデコレータ — 埋め込みで継承的に書く
+type loggingRepo struct {
+    UserRepository  // ← 匿名埋め込み: 未オーバーライドのメソッドはこれが提供
+    log *slog.Logger
+}
+
+func (r *loggingRepo) FindByID(ctx context.Context, id string) (*User, error) {
+    r.log.Info("finding user", "id", id)
+    return r.UserRepository.FindByID(ctx, id) // 内側の実装を呼ぶ
+}
+
+// 自由に組み合わせ可能
+repo := &loggingRepo{
+    UserRepository: &postgresUserRepo{db: db},
+    log:            logger,
+}
+```
+
+`loggingRepo` は `UserRepository` を「埋め込んでいる」ため、自動的に `UserRepository` インターフェースを満たす（実装しないメソッドは内側に委譲される）。**これはどの OOP 言語でも書きづらいパターンが、Go では言語の素機能として表現できる**例。
+
+#### インターフェース埋め込み — 標準ライブラリの実例
+
+```go
+// io パッケージ — 小さなインターフェースの合成
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+
+type Writer interface {
+    Write(p []byte) (n int, err error)
+}
+
+type Closer interface {
+    Close() error
+}
+
+// インターフェース同士を合成
+type ReadWriter interface {
+    Reader
+    Writer
+}
+
+type ReadWriteCloser interface {
+    Reader
+    Writer
+    Closer
+}
+
+// io.Copy は Reader と Writer の最小要求のみ
+func Copy(dst Writer, src Reader) (written int64, err error) {
+    // *os.File も bytes.Buffer も net.Conn も渡せる
+}
+```
+
+**Goの哲学**: 「**The bigger the interface, the weaker the abstraction**」（Rob Pike）— インターフェースが大きいほど抽象が弱くなる。小さなインターフェースを合成して大きなものを作る。
+
+#### Go の埋め込みの落とし穴
+
+```go
+// 同名メソッドの曖昧性
+type A struct{}
+func (A) Hello() { fmt.Println("A") }
+
+type B struct{}
+func (B) Hello() { fmt.Println("B") }
+
+type C struct {
+    A
+    B
+}
+
+c := C{}
+c.Hello() // ❌ コンパイルエラー: ambiguous selector
+c.A.Hello() // ✅ 明示的にアクセス
+```
+
+埋め込みはダイヤモンド継承のような曖昧さを生むことがあり、その場合**コンパイラが必ずエラーを出す**（C++ の virtual 継承のような暗黙の解決はしない）。
+
+詳細は[[Goの埋め込みとメソッド昇格]]（今後作成予定）も参照。
+
 ## 継承が適切な場面
 
 コンポジションを優先すべきだが、継承が正当化される場面もある:
