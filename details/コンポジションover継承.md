@@ -237,42 +237,59 @@ func main() {
 
 #### 同じ Repository パターンを Go で
 
-TypeScript で示した「Repository + Logger + Cache」のデコレータパターンは、Go では構造体埋め込みとインターフェースで自然に書ける:
+TypeScript で示した「Repository + Logger + Cache」のデコレータパターンは、Go では構造体埋め込みとインターフェースで自然に書ける（以降の `Account` 型は前述の `User` とは別文脈の DTO を想定）:
 
 ```go
-type UserRepository interface {
-    FindByID(ctx context.Context, id string) (*User, error)
+type Account struct {
+    ID    string
+    Email string
+}
+
+type AccountRepository interface {
+    FindByID(ctx context.Context, id string) (*Account, error)
 }
 
 // 実装
-type postgresUserRepo struct {
+type postgresAccountRepo struct {
     db *sql.DB
 }
 
-func (r *postgresUserRepo) FindByID(ctx context.Context, id string) (*User, error) {
+func (r *postgresAccountRepo) FindByID(ctx context.Context, id string) (*Account, error) {
     // ...DBクエリ
-    return &User{}, nil
+    return &Account{}, nil
 }
 
 // ロギングデコレータ — 埋め込みで継承的に書く
 type loggingRepo struct {
-    UserRepository  // ← 匿名埋め込み: 未オーバーライドのメソッドはこれが提供
+    AccountRepository  // ← 匿名埋め込み: 未オーバーライドのメソッドはこれが提供
     log *slog.Logger
 }
 
-func (r *loggingRepo) FindByID(ctx context.Context, id string) (*User, error) {
-    r.log.Info("finding user", "id", id)
-    return r.UserRepository.FindByID(ctx, id) // 内側の実装を呼ぶ
+func (r *loggingRepo) FindByID(ctx context.Context, id string) (*Account, error) {
+    r.log.Info("finding account", "id", id)
+    return r.AccountRepository.FindByID(ctx, id) // 内側の実装を呼ぶ
 }
 
-// 自由に組み合わせ可能
-repo := &loggingRepo{
-    UserRepository: &postgresUserRepo{db: db},
-    log:            logger,
+// 利用側 — 自由に組み合わせ可能
+func main() {
+    repo := &loggingRepo{
+        AccountRepository: &postgresAccountRepo{db: db},
+        log:               logger,
+    }
+    _ = repo
 }
 ```
 
-`loggingRepo` は `UserRepository` を「埋め込んでいる」ため、自動的に `UserRepository` インターフェースを満たす（実装しないメソッドは内側に委譲される）。**これはどの OOP 言語でも書きづらいパターンが、Go では言語の素機能として表現できる**例。
+`loggingRepo` は `AccountRepository` を「埋め込んでいる」ため、自動的に `AccountRepository` インターフェースを満たす（実装しないメソッドは内側に委譲される）。**これはどの OOP 言語でも書きづらいパターンが、Go では言語の素機能として表現できる**例。
+
+##### TypeScript と Go のデコレータ実装の対比
+
+| 観点 | TypeScript | Go |
+|---|---|---|
+| デコレータの書き方 | コンストラクタで `inner` を保持し、全メソッドを手動でラップ | インターフェースを匿名埋め込み、未オーバーライドのメソッドは自動委譲 |
+| ボイラープレート | インターフェースの全メソッドを委譲メソッドとして書く必要あり | オーバーライドしたいメソッドだけ書けばよい |
+| 型関係 | `class X implements Repository {}` で明示宣言 | 埋め込み時点で `Repository` を満たす（構造的型） |
+| メソッド追加時 | 既存デコレータ全てに委譲メソッドを追加する必要あり | 埋め込みのおかげで何もしなくていい |
 
 #### インターフェース埋め込み — 標準ライブラリの実例
 
@@ -330,15 +347,13 @@ c.Hello() // ❌ コンパイルエラー: ambiguous selector
 c.A.Hello() // ✅ 明示的にアクセス
 ```
 
-埋め込みはダイヤモンド継承のような曖昧さを生むことがあり、その場合**コンパイラが必ずエラーを出す**（C++ の virtual 継承のような暗黙の解決はしない）。
-
-詳細は[[Goの埋め込みとメソッド昇格]]（今後作成予定）も参照。
+埋め込みはダイヤモンド継承のような曖昧さを生むことがあり、その場合**コンパイラが必ずエラーを出す**（C++ の virtual 継承のような暗黙の解決はしない）。Go は「**曖昧なら明示せよ**」という方針を貫いており、`c.A.Hello()` または `c.B.Hello()` のように埋め込みフィールド名で完全修飾することが要求される。
 
 ## 継承が適切な場面
 
 コンポジションを優先すべきだが、継承が正当化される場面もある:
 
-1. **フレームワークが要求する場合** — `React.Component`、Laravel の `Controller extends BaseController` など。フレームワークの設計に従う
+1. **フレームワークが要求する場合** — Laravel の `Controller extends BaseController`、NestJS の `@Controller()` クラス、Spring の `@RestController` 抽象クラス、Django の `View` クラスなど、フレームワークが基底クラス継承を前提にしている場合は素直に従う（注: [[Reactの設計思想とフック\|React]] は 2019 年の Hooks 導入以降、関数コンポーネントが標準で `React.Component` 継承は新規には推奨されない）
 2. **真の is-a 関係** — `HttpError extends Error` のように、振る舞いレベルで完全に互換性がある場合
 3. **テンプレートメソッドパターン** — アルゴリズムの骨格を親クラスで定義し、一部のステップだけ子クラスでカスタマイズする。ただし深い継承階層は避ける（2階層まで）
 
