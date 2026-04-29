@@ -11,23 +11,20 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title JavaScriptの主要な転換点
-    1995-05 : Brendan Eich が Netscape で<br/>「Mocha」を10日間で設計
-    1995-09 : LiveScript に改名<br/>Navigator 2.0β同梱
-    1995-12 : JavaScript に再改名<br/>(Java の人気便乗マーケティング)
-    1996 : Microsoft が JScript で<br/>追従（IE3）
-    1997 : ECMA-262 標準化開始<br/>（言語名は ECMAScript）
-    1999 : ES3 リリース<br/>正規表現・try/catch
-    2009 : ES5 リリース<br/>strict mode / JSON / Array methods
-    2009 : Node.js (Ryan Dahl)<br/>サーバーサイドJS時代
-    2015 : ES6/ES2015 大改革<br/>class / let / arrow / Promise / module
-    2016 : 年次リリース化<br/>（毎年6月に新仕様確定）
-    2017 : async/await (ES2017)<br/>非同期記法の標準化
-    2020 : Deno (Ryan Dahl 第2作)<br/>2021 Bun 登場
-    2025 : ES2025<br/>Iterator helpers / Set methods / RegExp.escape
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 1995-05 | Brendan Eich が Netscape で「Mocha」を10日間で設計 |
+| 1995-09 | LiveScript に改名し Navigator 2.0β に同梱 |
+| 1995-12 | JavaScript に再改名（Java の人気便乗マーケティング） |
+| 1996 | Microsoft が JScript で追従（IE3） |
+| 1997 | ECMA-262 標準化開始（言語名は ECMAScript） |
+| 1999 | ES3 リリース（正規表現・try/catch） |
+| 2009 | ES5 リリース（strict mode / JSON / Array methods）、Node.js 登場（Ryan Dahl） |
+| 2015 | ES6 / ES2015 大改革（class / let / arrow / Promise / module） |
+| 2016 | 年次リリース化開始（毎年6月） |
+| 2017 | async/await 標準化（ES2017） |
+| 2020 | Deno リリース、2022年に Bun 登場 |
+| **2025** | **ES2025（Iterator helpers / Set methods / RegExp.escape / Float16Array）** |
 
 ### Brendan Eich の10日間
 

@@ -11,21 +11,19 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title Rubyの主要な転換点
-    1993-02 : まつもとゆきひろ (Matz) が Ruby 開発開始<br/>Perl の実用性と Smalltalk の純粋OOP を融合
-    1995-12 : Ruby 0.95 公開（クリスマス）<br/>以降 12月25日リリースが伝統に
-    2000 : 『プログラミング Ruby』（PickAxe本）英訳<br/>海外への普及契機
-    2004 : Ruby on Rails 1.0（DHH）<br/>「Convention over Configuration」<br/>スタートアップ言語の代表に
-    2007 : Twitter / Shopify / GitHub 等が採用
-    2013 : Ruby 2.0<br/>キーワード引数・Refinements
-    2018 : Ruby 2.6 / MJIT 実験的導入
-    2020-12 : Ruby 3.0（Matz「3 倍速く」目標）<br/>Ractor (experimental)・RBS型シグネチャ・パターンマッチ
-    2022-12 : Ruby 3.2 / YJIT 本番投入<br/>(Shopifyで実証)
-    2024-12 : Ruby 3.4 / Prism パーサーデフォルト化<br/>Modular GC・YJIT 5-7%高速化
-    2025-12 : Ruby 4.0（30周年）<br/>ZJIT 新JIT（実験的）・Ractor::Port・Ruby::Box
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 1993-02 | まつもとゆきひろ（Matz）が Ruby 開発開始（Perl の実用性 + Smalltalk の純粋 OOP） |
+| 1995-12 | Ruby 0.95 公開（クリスマス、以降 12/25 リリースが伝統に） |
+| 2000 | 『プログラミング Ruby』（PickAxe）英訳で海外へ普及 |
+| 2004 | Ruby on Rails 1.0（DHH）、Convention over Configuration |
+| 2007 | Twitter / Shopify / GitHub 等が採用 |
+| 2013 | Ruby 2.0 / キーワード引数 / Refinements |
+| 2018 | Ruby 2.6 / MJIT 実験的導入 |
+| 2020-12 | Ruby 3.0（3倍速く目標達成）、Ractor 実験的 / RBS / パターンマッチ |
+| 2022-12 | Ruby 3.2 / YJIT 本番投入（Shopify で実証） |
+| 2024-12 | Ruby 3.4 / Prism パーサーデフォルト化、Modular GC |
+| **2025-12** | **Ruby 4.0（30周年）、ZJIT 実験的 / Ractor::Port / Ruby::Box** |
 
 ### 設計者と動機
 

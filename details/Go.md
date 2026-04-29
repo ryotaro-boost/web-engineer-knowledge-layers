@@ -11,22 +11,20 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title Goの主要な転換点
-    2007 : Google社内で開始<br/>Griesemer/Pike/Thompson が<br/>C++ビルド待ちの不満から設計
-    2009 : OSS化 (BSDライセンス)<br/>初公開
-    2012 : 1.0 リリース<br/>後方互換性の約束（Go 1 promise）
-    2014 : Docker / Kubernetes 採用<br/>クラウド時代の中心言語へ
-    2015 : context パッケージ標準化<br/>キャンセル伝播の標準API
-    2018 : Go modules 導入 (1.11)<br/>GOPATH 時代の終わり
-    2022 : Generics (1.18)<br/>型パラメータ追加・10年越しの議論決着
-    2024-02 : 1.22 / Range over int<br/>net/http ルーティング改善
-    2024-08 : 1.23 / Range over function<br/>カスタムイテレータ
-    2025-02 : 1.24 / Generic type aliases<br/>Swiss Tables maps (用途により30〜60%高速化)
-    2025-08 : 1.25 / Green Tea GC (experimental)<br/>JSON v2 実験版
-    2026-02 : 1.26 / Green Tea GC デフォルト化<br/>cgo 30%高速化・goroutine leak profile
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 2007 | Google 社内で Griesemer / Pike / Thompson が設計開始（C++ ビルド待ちへの不満が動機） |
+| 2009 | OSS 化（BSD ライセンス） |
+| 2012 | 1.0 リリース（Go 1 promise = 後方互換の約束） |
+| 2014 | Docker / Kubernetes が Go 採用、クラウド時代の中心言語へ |
+| 2015 | `context` パッケージ標準化（キャンセル伝播の標準 API） |
+| 2018 | Go modules 導入（1.11、GOPATH 時代の終わり） |
+| 2022 | Generics 導入（1.18、10年越しの議論決着） |
+| 2024-02 | 1.22 / Range over int、net/http ルーティング改善 |
+| 2024-08 | 1.23 / Range over function（カスタムイテレータ） |
+| 2025-02 | 1.24 / Generic type aliases、Swiss Tables maps（用途により30〜60%高速化） |
+| 2025-08 | 1.25 / Green Tea GC 実験的、JSON v2 実験版 |
+| **2026-02** | **1.26 / Green Tea GC デフォルト化、cgo 30%高速化、goroutine leak profile** |
 
 ### 設計者と動機
 

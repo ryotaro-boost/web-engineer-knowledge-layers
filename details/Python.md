@@ -11,22 +11,20 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title Pythonの主要な転換点
-    1989-12 : Guido van Rossum がクリスマス休暇に開発開始<br/>ABC言語の後継・モンティ・パイソン由来の名前
-    1991 : Python 0.9.0 公開
-    2000 : Python 2.0<br/>list comprehension・GC
-    2008 : Python 3.0<br/>後方非互換の大改革・Unicode文字列
-    2014 : PEP 484 型ヒント提案<br/>(Python 3.5 で導入)
-    2015 : asyncio 標準化 (Python 3.4-3.5)<br/>async/await構文
-    2018 : Guido が BDFL 退任<br/>Steering Council 体制へ
-    2020 : Python 2 のサポート終了<br/>3 への移行完了
-    2022 : Python 3.11<br/>Faster CPython プロジェクト 平均 1.25x（〜25%）高速化
-    2024-02 : uv 0.1.0 (Astral)<br/>Rust製の高速パッケージマネージャ
-    2024-10 : Python 3.13<br/>free-threaded build 実験的サポート（PEP 703）
-    2025-10 : Python 3.14<br/>free-threaded 正式サポート(Phase II、PEP 779)<br/>シングルスレッド性能ペナルティ 5-10% に改善
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 1989-12 | Guido van Rossum がクリスマス休暇に開発開始（ABC 言語の後継、モンティ・パイソン由来の名前） |
+| 1991 | Python 0.9.0 公開 |
+| 2000 | Python 2.0（list comprehension / GC） |
+| 2008 | Python 3.0（後方非互換の大改革、Unicode 文字列） |
+| 2014 | PEP 484 型ヒント提案（3.5 で導入） |
+| 2015 | asyncio 標準化と async/await 構文（3.4-3.5） |
+| 2018 | Guido が BDFL 退任、Steering Council 体制へ |
+| 2020 | Python 2 サポート終了 |
+| 2022 | 3.11 / Faster CPython 平均 1.25x（〜25%）高速化 |
+| 2024-02 | uv 0.1.0（Astral、Rust 製の高速パッケージマネージャ） |
+| 2024-10 | 3.13 / free-threaded 実験的サポート（PEP 703） |
+| **2025-10** | **3.14 / free-threaded 正式サポート（Phase II、PEP 779）、性能ペナルティ 5-10% に改善** |
 
 ### 設計者と動機
 

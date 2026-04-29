@@ -11,23 +11,20 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title Rustの主要な転換点
-    2006 : Graydon Hoare が個人プロジェクト開始<br/>Mozillaで業務時間外に開発
-    2009 : Mozillaが正式スポンサーに<br/>Servo（次世代ブラウザエンジン）目的
-    2010 : 公式アナウンス・OSS化<br/>OCaml で書かれた最初のコンパイラ
-    2012 : セルフホスティング開始<br/>Rust自身でコンパイラを書き直し
-    2015-05 : Rust 1.0 リリース<br/>後方互換の約束開始
-    2018 : Rust 2018 Edition<br/>NLL（Non-Lexical Lifetimes）・モジュールシステム改善
-    2018 : Cloudflare Workersが採用<br/>Dropbox / AWS Firecracker / Discordも
-    2020 : Mozilla がレイオフ・<br/>Rust Foundation 設立<br/>(AWS/Microsoft/Google/Huawei等が支援)
-    2021 : Rust 2021 Edition
-    2022-12 : Linux 6.1 でRustサポート正式マージ<br/>(C 独占以来初の言語追加)<br/>WindowsカーネルにもRust導入開始
-    2024 : SWC/Turbopack/Biome/Ruff/uv/ty<br/>Web ツール群でRust普及加速
-    2025-02 : Rust 1.85 / 2024 Edition 安定化<br/>async closure・improved async lifetime
-    2026 : async-trait crate を言語機能で代替<br/>generators 進行中
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 2006 | Graydon Hoare が個人プロジェクトとして Mozilla で開発開始 |
+| 2009 | Mozilla が正式スポンサーに（Servo ブラウザエンジン目的） |
+| 2010 | 公式アナウンス / OSS 化（最初のコンパイラは OCaml 製） |
+| 2012 | セルフホスティング開始（Rust 自身でコンパイラを書き直し） |
+| 2015-05 | Rust 1.0 リリース（後方互換の約束開始） |
+| 2018 | Rust 2018 Edition / NLL、Cloudflare Workers / AWS Firecracker / Discord 採用 |
+| 2020 | Mozilla レイオフ後 Rust Foundation 設立（AWS / Microsoft / Google / Huawei 支援） |
+| 2021 | Rust 2021 Edition |
+| 2022-12 | Linux 6.1 で Rust 正式マージ（C 独占以来初の言語追加）、Windows カーネルでも採用 |
+| 2024 | SWC / Turbopack / Biome / Ruff / uv / ty で Web ツール群が Rust 化 |
+| **2025-02** | **Rust 1.85 / 2024 Edition 安定化 / async closure** |
+| 2026 | async-trait を言語機能で代替、generators 進行中 |
 
 ### 設計者と動機
 

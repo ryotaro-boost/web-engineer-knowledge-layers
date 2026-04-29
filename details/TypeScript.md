@@ -11,20 +11,18 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title TypeScriptの主要な転換点
-    2010 : 開発開始<br/>Anders Hejlsberg（C#/Delphi/Turbo Pascal設計者）が主導
-    2012 : 0.8 公開・OSS化<br/>JSへの段階的型付けを提案
-    2014 : Angular 2 採用<br/>採用が爆発的に広がる契機
-    2017 : Babel + TS統合<br/>Reactコミュニティへ拡大、フロント標準化
-    2019 : DenoがTS標準採用<br/>サーバーサイドへの広がり
-    2022 : 4.9 / satisfies<br/>型推論の表現力が一段成熟
-    2023 : 5.0 Decorators Stage3<br/>ESM/Bundlerエコシステムと統合
-    2024 : 5.7 (Nov) / 改善された<br/>エラー報告
-    2025 : 5.8 (Mar) / require ESM<br/>TypeScript 7 (Go) 発表・プレビュー開始
-    2026-04 : TypeScript 7.0 Beta 公開<br/>tsgo（Go版コンパイラ）配布開始<br/>約10倍高速ビルド
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 2010 | 開発開始（Anders Hejlsberg、C#/Delphi/Turbo Pascal 設計者） |
+| 2012 | 0.8 公開・OSS化、JS への段階的型付けを提案 |
+| 2014 | Angular 2 採用で爆発的に普及 |
+| 2017 | Babel + TS 統合、React コミュニティへ拡大しフロント標準化 |
+| 2019 | Deno が TS を標準採用、サーバーサイドへ |
+| 2022 | 4.9 / `satisfies` operator |
+| 2023 | 5.0 / Decorators Stage 3 |
+| 2024-11 | 5.7 / エラー報告改善 |
+| 2025-03 | 5.8 / `require()` で ESM 対応、TypeScript 7（Go 書き直し / Corsa）発表 |
+| **2026-04** | **TypeScript 7.0 Beta 公開（tsgo 配布開始）、約10倍高速ビルド** |
 
 ### 設計者と動機
 

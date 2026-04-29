@@ -11,24 +11,22 @@ created: 2026-04-29
 
 ## 誕生と歴史的経緯
 
-```mermaid
-timeline
-    title PHPの主要な転換点
-    1993-1994 : Rasmus Lerdorf が個人サイト用<br/>"Personal Home Page Tools" を C で開発<br/>CGIスクリプト集
-    1995-06-08 : PHP Tools 1.0 公開<br/>(comp.infosystems.www.authoring.cgi)
-    1996 : PHP/FI 統合（Forms Interpreter）<br/>HTML埋め込み構文
-    1997 : Andi Gutmans/Zeev Suraski が<br/>パーサーを書き直し（PHP 3）
-    2000 : PHP 4 / Zend Engine<br/>本格的言語仕様の確立
-    2004 : PHP 5 / Zend Engine 2<br/>OOP本格対応
-    2010 : Composer (依存管理)<br/>2011 Laravel 1.0
-    2015 : PHP 7<br/>性能2倍・スカラー型宣言
-    2020 : PHP 8.0<br/>JIT・名前付き引数・attribute・match・union型
-    2021 : PHP 8.1<br/>enum・readonly・Fiber・never型
-    2022 : PHP 8.2<br/>readonly class・DNF型・null/false/true 単独型
-    2023 : PHP 8.3<br/>typed class constants・json_validate
-    2024-11 : PHP 8.4<br/>property hooks・asymmetric visibility<br/>新JIT (IR Framework)・Lazy Objects
-    2025-11 : PHP 8.5<br/>pipe operator (|>)・clone with
-```
+| 年月 | 主な転換点 |
+|---|---|
+| 1993-1994 | Rasmus Lerdorf が個人サイト用に C で CGI スクリプト集を開発 |
+| 1995-06-08 | PHP Tools 1.0 公開（comp.infosystems.www.authoring.cgi） |
+| 1996 | PHP/FI 統合（Forms Interpreter / HTML 埋め込み構文） |
+| 1997 | Andi Gutmans / Zeev Suraski がパーサーを書き直し（PHP 3） |
+| 2000 | PHP 4 / Zend Engine 登場 |
+| 2004 | PHP 5 / Zend Engine 2 で OOP 本格対応 |
+| 2010 | Composer 登場（依存管理）、2011 年 Laravel 1.0 |
+| 2015 | PHP 7 で性能2倍、スカラー型宣言 |
+| 2020 | PHP 8.0 / JIT / 名前付き引数 / attribute / match / union 型 |
+| 2021 | PHP 8.1 / enum / readonly / Fiber / never 型 |
+| 2022 | PHP 8.2 / readonly class / DNF 型 |
+| 2023 | PHP 8.3 / typed class constants |
+| 2024-11 | PHP 8.4 / property hooks / asymmetric visibility、新 JIT（IR Framework） |
+| **2025-11** | **PHP 8.5 / pipe operator（\|>）/ clone with** |
 
 ### 設計者と動機
 
