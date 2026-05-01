@@ -119,7 +119,7 @@ flowchart LR
 
 | 実装 | 種別 | 特徴 |
 |------|------|------|
-| **Kong** | OSS + Enterprise | Nginx (OpenResty) ベース。プラグインエコシステムが豊富。宣言的設定で GitOps 対応 |
+| **[[Kong]]** | OSS + Enterprise | Nginx (OpenResty) ベース。プラグインエコシステムが豊富。宣言的設定で GitOps 対応 |
 | **AWS API Gateway** | マネージド | Lambda 統合、REST / HTTP / WebSocket API。サーバーレス構成の第一選択 |
 | **Google Cloud Endpoints** | マネージド | Envoy ベース。OpenAPI / gRPC スキーマからの自動生成 |
 | **Envoy** | OSS | C++ 製の高性能 L7 プロキシ。Istio のデータプレーンとして使われる |
@@ -130,7 +130,7 @@ flowchart LR
 
 ### TypeScript（Express）— 簡易 API Gateway
 
-実務では Kong や AWS API Gateway を使うが、仕組みの理解のために Express で Gateway の主要機能を実装する。
+実務では [[Kong]] や AWS API Gateway を使うが、仕組みの理解のために Express で Gateway の主要機能を実装する。
 
 ```typescript
 import express, { Request, Response, NextFunction } from 'express';
