@@ -127,10 +127,9 @@ Webエンジニアリングの知識を8層（Layer 0-7）に分けて体系的�
 | `/refactor-topic` | 密度突出節を抽出し `details/` への切り出しを提案 | 新規（Week 1） |
 | `/review-ai-code` | AI生成コードを関連トピック観点でレビュー | 新規（Week 1） |
 | `/design-prompt` | 機能要件からAIへのプロンプト雛形を生成 | 新規（Week 1） |
-| `/quiz` | 動的に理解度クイズを生成（最低2問はAIコードレビュー設問） | 予定（Week 4） |
-| `/exercise` | `_practice/` から次の演習を提案 / 雛形生成 | 予定（Week 4） |
-| `/diagnose` | 症状から関連レイヤー / トピックへの追跡を案内 | 予定（Week 4） |
-| `/anti-pattern-scan` | コードを `_anti-patterns/` 索引と照合 | 予定（Week 4） |
+| `/quiz` | 動的に理解度クイズを生成（最低2問はAIコードレビュー設問） | 新規（Week 4） |
+| `/diagnose` | 症状から関連レイヤー / トピックへの追跡を案内 | 新規（Week 4） |
+| `/anti-pattern-scan` | コードを `_anti-patterns/` 索引と照合 | 新規（Week 4） |
 | `/glossary` | 用語追加 / detail リンク張り | 予定（Week 11） |
 | `/starter-path` | 最小学習パスを学習者にパーソナライズ | 予定（Week 11） |
 
