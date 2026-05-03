@@ -12,7 +12,7 @@
 
 | レイヤー | ファイル | 状態 |
 |---------|---------|------|
-| Layer 0: CS基礎 | (整備中) | 未作成 |
+| Layer 0: CS基礎 | [[_anti-patterns/レイヤー別/Layer0\|Layer0.md]] | 初版作成済 |
 | Layer 1: OSインフラ | [[_anti-patterns/レイヤー別/Layer1\|Layer1.md]] | 初版作成済 |
 | Layer 2: ネットワーク | [[_anti-patterns/レイヤー別/Layer2\|Layer2.md]] | 初版作成済 |
 | Layer 3: データ永続化 | (整備中) | 未作成 |
