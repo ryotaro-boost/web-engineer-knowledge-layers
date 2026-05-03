@@ -153,7 +153,7 @@ JSが遅いのではなく、**レンダーブロッキング**と**メインス
 - `<script defer>` — HTMLパース完了後に実行（DOMContentLoadedはdeferスクリプト実行完了後に発火）
 - `<script async>` — ダウンロード完了次第すぐ実行（実行順序が保証されない）
 - `<script type="module">` — デフォルトでdefer動作、ESモジュールとして扱う
-- コード分割（Code Splitting）— 初期表示に不要なJSを遅延読み込み。これを実現する基盤が[[モジュールバンドラ-webpackとTurbopack|モジュールバンドラ（webpack/Turbopack）]]である
+- コード分割（Code Splitting）— 初期表示に不要なJSを遅延読み込み。これを実現する基盤が[[モジュールバンドラ-webpackとTurbopack|モジュールバンドラ（webpack/Turbopack）]]であり、コード分割と[[バンドラのキャッシュ問題|長期キャッシュ戦略]]はセットで設計する必要がある（ハッシュ付きファイル名・vendor チャンク分離・ChunkLoadError 対策）
 
 ```mermaid
 sequenceDiagram
