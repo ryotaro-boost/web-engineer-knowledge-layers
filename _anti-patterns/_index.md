@@ -18,7 +18,7 @@
 | Layer 3: データ永続化 | [[_anti-patterns/レイヤー別/Layer3\|Layer3.md]] | 初版作成済 |
 | Layer 4: アプリケーション (Backend) | [[_anti-patterns/レイヤー別/Layer4-Backend\|Layer4-Backend.md]] | 初版作成済 |
 | Layer 4: アプリケーション (Frontend) | [[_anti-patterns/レイヤー別/Layer4-Frontend\|Layer4-Frontend.md]] | 初版作成済 |
-| Layer 5: パフォーマンス | (整備中) | 未作成 |
+| Layer 5: パフォーマンス | [[_anti-patterns/レイヤー別/Layer5\|Layer5.md]] | 初版作成済 |
 | Layer 6: セキュリティ | (整備中) | 未作成 |
 | Layer 7: 設計アーキテクチャ | (整備中) | 未作成 |
 
