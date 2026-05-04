@@ -20,7 +20,7 @@
 | Layer 4: アプリケーション (Frontend) | [[_anti-patterns/レイヤー別/Layer4-Frontend\|Layer4-Frontend.md]] | 初版作成済 |
 | Layer 5: パフォーマンス | [[_anti-patterns/レイヤー別/Layer5\|Layer5.md]] | 初版作成済 |
 | Layer 6: セキュリティ | [[_anti-patterns/レイヤー別/Layer6\|Layer6.md]] | 初版作成済 |
-| Layer 7: 設計アーキテクチャ | (整備中) | 未作成 |
+| Layer 7: 設計アーキテクチャ | [[_anti-patterns/レイヤー別/Layer7\|Layer7.md]] | 初版作成済 |
 
 ## パターン別（横断的なAIの癖）
 
