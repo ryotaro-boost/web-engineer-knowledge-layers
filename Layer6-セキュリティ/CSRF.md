@@ -1,14 +1,29 @@
 ---
 layer: 6
 topic: CSRF
-type: topic
 status: 🔴 未着手
 created: 2026-03-30
+prerequisites: ["[[HTTP-HTTPS]]", "[[認証と認可]]", "[[XSS]]"]
+next_steps: ["[[CORS]]", "[[最小権限の原則]]", "[[ルーティングとミドルウェア]]"]
+difficulty: intermediate
+estimated_minutes: 30
+ai_collaboration: partial
 ---
 
 # CSRF（クロスサイトリクエストフォージェリ / Cross-Site Request Forgery）
 
 > **一言で言うと:** ブラウザがCookieを自動送信する性質を悪用し、被害者のブラウザを踏み台にして正規サイトに意図しないリクエストを送信させる攻撃。CSRFトークンとSameSite Cookie属性で防ぐ。
+
+## 3分で全体像
+
+- **何を解決する技術か:** ログイン中のユーザーのブラウザを「正規 Cookie 付きの送信機」として悪用される事故を防ぐ。被害者が罠ページを開くだけで送金・設定変更・投稿が走る攻撃を、**リクエスト元の検証**で構造的に止める
+- **代表的な使用シーン:** Cookie ベース認証を使う Web アプリ全般（ネットバンク・SNS・管理画面・SSR フレームワーク）、フォーム POST、状態変更系 API、SPA + Cookie 認証構成、SameSite=None で意図的にクロスサイトを許す決済フロー
+- **これだけは覚える3つ:**
+    1. **CSRF は「Cookie が自動送信される」性質への攻撃** — Bearer Token を `Authorization` ヘッダで送る方式は、JS が明示的に付与するためそもそも CSRF が成立しない。一方で **JWT を HttpOnly Cookie に保存して自動送信させた瞬間に CSRF リスクが復活する**ので「JWT だから安全」は誤り
+    2. **CORS は CSRF を防がない** — CORS が制限するのは**レスポンスの読み取り**であってリクエスト送信ではない。`<form>` POST は単純リクエストとしてプリフライトなしで届く。面接で頻出の罠
+    3. **多層防御で守る** — CSRF トークン（Synchronizer / Double Submit）+ `SameSite=Lax` 以上 + `GET で状態変更しない` + Origin/Referer 検証。1 つだけでは取りこぼす
+- **AIに任せやすいか:** **一部任せられる** — Express の csrf-csrf、Django の `CsrfViewMiddleware`、Rails の `protect_from_forgery` のような**フレームワーク標準の有効化**は AI が高品質に書ける。一方で「**CSRF 保護を除外するルートの判断**」「**SameSite=None を選ぶ判断**」「**SPA でのトークン保存場所のトレードオフ**」は人間判断。AI は WebHook 受信エンドポイントを除外するつもりで全 API を除外しがち
+- **詰まったらここを読む:** [[XSS]] / [[CORS]] / [[認証と認可]] / [[セッションとJWT]]
 
 ## なぜ必要か
 
@@ -212,14 +227,71 @@ flowchart TD
 | 全ユーザー共通のCSRFトークン | 他ユーザーのトークンで攻撃可能 | セッションに紐づくトークンを生成 |
 | CORSだけでCSRF対策とみなす | CORSはリクエスト送信を止めない | CSRFトークンで対策 |
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| CSRF保護を持たないAPIフレームワークでCookie認証を使用 | FastAPI等のAPI指向フレームワークはCSRF保護がデフォルトで無い | Cookie認証を使う場合は明示的にCSRFミドルウェアを導入 |
-| CSRFトークン検証から全APIルートを除外 | Webhookなど特定ルートの除外が全体に波及するコードを生成しがち | 除外はルート単位で明示的に指定 |
-| `SameSite=None` を深く考えずに設定 | サードパーティCookie利用のために安易に設定するとCSRF防御が無効化 | 本当に必要なケースのみ `None` を使用し、CSRFトークンで補完 |
-| テスト環境でCSRF保護を無効化してそのまま本番へ | `if (env !== 'test') { enableCsrf() }` のような条件分岐が本番で漏れる | 環境変数ではなく、テスト用のHTTPクライアントでトークンを取得 |
+| フレームワーク標準 CSRF ミドルウェアの導入（Django / Rails / Express + csrf-csrf / Laravel） | 実装・レビュー両方 AI 委任。`/review-ai-code` で「除外ルート過多」「`SameSite=None` 誤用」を検出させる | フレームワーク選定後の整合性確認のみ |
+| `SameSite` Cookie 属性の設定 | 既定値 `Lax` の選択は AI 任せ | `SameSite=None` を選ぶ場面（決済リダイレクト・iframe 埋め込み）の妥当性判断 |
+| Double Submit Cookie パターンの SPA 実装 | トークン Cookie 発行 + ヘッダ検証ロジックは AI が定型実装可 | トークン保存先（localStorage / sessionStorage / Cookie）のトレードオフ判断 |
+| CSRF 保護除外ルートの設計（Webhook 受信、外部 API コールバック） | 提案は AI、レビューは `/review-ai-code` で「全 API 除外」を検出 | 除外ルートのリスト承認、Webhook の代替認証（HMAC 署名）方式の設計 |
+| Origin / Referer ヘッダの検証 | 実装は AI、proxy 配下での `X-Forwarded-Host` 整合性も AI に確認させる | 信頼するプロキシの段数決定（`trust proxy`）、CDN 配下の挙動確認 |
+| 攻撃再現テスト（罠 HTML を用意して別オリジンから POST） | テスト生成・CI 組み込みは AI 委任 | テスト対象エンドポイントの優先順位決定 |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **状態変更が GET で行われていないか** — `GET /transfer?to=X&amount=Y` は `<img src>` だけで攻撃可能。POST/PUT/DELETE で実装されているか、`safe-methods` の扱いが HTTP 仕様準拠か確認する
+2. **CSRF 保護の除外（exempt）が必要最小限か** — AI は WebHook 1 本のために全 API を除外する設定を書きがち。`csrf_exempt` / `withoutMiddleware` の対象は**個別ルートに限定**し、Webhook には HMAC 署名等の別認証を入れる
+3. **`SameSite` の値と Cookie 認証の整合性** — `SameSite=None` には `Secure` 必須。`Lax` で十分なケースに `None` を提案していないか、その逆に決済リダイレクトで `Lax` のままにしていないかを確認
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提（プロジェクトの状況・既存のコード規約）
+- フレームワーク: Express 5 / SPA は別オリジン（app.example.com → api.example.com）
+- 認証: HttpOnly + Secure + SameSite=Lax の Session Cookie
+- 状態変更系 API: POST /api/transfer, PUT /api/profile, DELETE /api/account
+- 既存の csrf-csrf は導入済み、トークンは X-CSRF-Token ヘッダで送信
+
+# やってほしいこと
+- /api/webhooks/stripe を新規追加する。Stripe からのみ POST を受け付ける
+
+# 守ってほしい制約（このトピック固有のもの）
+- /api/webhooks/* は CSRF 保護から除外してよいが、代わりに Stripe-Signature ヘッダで HMAC 検証を必須にする
+- 既存の状態変更系 API の CSRF 保護は維持する
+- SameSite=None への変更は禁止（決済リダイレクトは別ドメインを経由しない）
+
+# 完了の判断基準
+- 別オリジンから X-CSRF-Token なしで POST /api/transfer すると 403
+- /api/webhooks/stripe は CSRF トークンなしで通るが、署名不正の場合は 401
+- 既存テストが緑のまま
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| CSRF 保護を持たない API フレームワークで Cookie 認証を使用 | FastAPI / Hono 等は CSRF 保護がデフォルトで無い | Cookie 認証を使う場合は明示的に CSRF ミドルウェアを導入 |
+| CSRF トークン検証から全 API ルートを除外 | Webhook など特定ルートの除外が全体に波及するコードを生成しがち | 除外はルート単位で明示。代替認証（HMAC 署名）を入れる |
+| `SameSite=None` を深く考えずに設定 | サードパーティ Cookie 利用のために安易に設定すると CSRF 防御が無効化 | 本当に必要なケースのみ `None` を使用し、CSRF トークンで補完 |
+| テスト環境で CSRF 保護を無効化してそのまま本番へ | `if (env !== 'test') { enableCsrf() }` のような条件分岐が本番で漏れる | 環境変数で分岐せず、テスト用 HTTP クライアントでトークンを取得する設計に統一 |
+| GET エンドポイントで状態変更（DB 書き込み・課金処理） | `<img src>` だけで攻撃可能、HTTP 仕様（RFC 9110）違反 | 状態変更は POST/PUT/DELETE のみ、GET は冪等・副作用なし |
+| 全ユーザー共通の固定 CSRF トークン | 1 つ漏れると全ユーザーが攻撃される | セッション / ユーザー単位でトークンを発行し、Synchronizer Token として検証 |
+| CORS の `Allow-Origin` 制限を CSRF 対策とみなす | CORS はレスポンス読み取り制限であり、リクエスト送信は止めない | CSRF トークン + `SameSite` で対策 |
+| Bearer Token を HttpOnly Cookie に保存しつつ CSRF 対策なし | Cookie 自動送信が復活し CSRF が成立 | Cookie 保存にする時点で Cookie 認証と同等の CSRF 対策が必要 |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -407,6 +479,53 @@ async function transferMoney(to: string, amount: number) {
 - OWASP CSRF Prevention Cheat Sheet — CSRF防御策の網羅的ガイド
 - PortSwigger Web Security Academy: CSRF — ハンズオン学習環境（無料）
 - MDN Web Docs: SameSite cookies — SameSite属性の公式リファレンス
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. CSRF が成立する 4 つの前提条件を列挙し、そのうちどれを潰せば防御になるかを述べよ。
+2. 「`Authorization: Bearer <JWT>` ヘッダで認証している API は CSRF 対策不要」は常に正しいか。Yes / No と理由を述べよ。
+3. 次のコードは Express + csrf-csrf を使っているように見えるが、CSRF 観点で問題がある。**3 箇所すべての問題を指摘し**、それぞれどう直すべきかを述べよ。
+   ```typescript
+   import { doubleCsrf } from 'csrf-csrf';
+   const { doubleCsrfProtection } = doubleCsrf({ getSecret: () => 'my-secret' });
+
+   // すべての状態変更系 API
+   app.post('/api/transfer', doubleCsrfProtection, transferHandler);
+   app.delete('/api/account', doubleCsrfProtection, deleteHandler);
+
+   // GitHub からの Webhook を受信する
+   app.post('/api/webhooks/github', githubWebhookHandler); // 開発時に CSRF が邪魔だったので外した
+
+   // 銀行残高を取得（読み取り専用に見えるが、ログ書き込み + 残高再計算が走る）
+   app.get('/api/balance/refresh', refreshBalance);
+   ```
+
+> [!note]- 解答の指針
+>
+> > [!info] 用語ミニ辞典
+> > - **Synchronizer Token Pattern**: サーバーがセッションごとに固有のトークンを生成し、フォームの hidden field に埋め込んで送信させる方式。サーバーはセッションのトークンと送信値を照合する。攻撃者は被害者セッションのトークンを知る手段がない
+> > - **Double Submit Cookie Pattern**: トークンを Cookie とリクエストヘッダ（または body）の両方で送らせ、サーバーが両者の一致を検証する方式。SameSite Cookie で攻撃者は被害者の Cookie を読み取れないため、ヘッダ値を一致させられない。SPA + API 構成で使いやすい
+> > - **SameSite Cookie 属性**: Cookie をクロスサイトリクエストで送信するかをブラウザに指示する属性。`Strict`（送信しない）/ `Lax`（トップレベルナビゲーションの GET のみ送信、現代ブラウザのデフォルト）/ `None`（常に送信、`Secure` 必須）の 3 値
+> > - **HMAC 署名**: 共有秘密鍵とハッシュ関数で計算した署名値で、送信者を検証する仕組み。Webhook では `X-Hub-Signature-256` のようなヘッダで送られ、受信側は同じ秘密鍵で再計算して照合する。CSRF 保護を外す代わりの認証として有効
+> > - **単純リクエスト（Simple Request）**: CORS でプリフライトが発生しないリクエスト。`<form>` の POST は `application/x-www-form-urlencoded` で送られるため単純リクエストとなり、CORS の制限を受けずにサーバーに届く（CSRF が成立する根拠）
+>
+> 1. **4 条件:**
+>     ① 被害者が対象サイトにログイン済み（認証 Cookie がある）
+>     ② サイトが Cookie ベース認証を使用
+>     ③ サイトがリクエスト元検証を持たない
+>     ④ 攻撃者が被害者を罠ページに誘導できる
+>     **どれを潰すか**: ② と ③ がアプリ側でコントロール可能。② は Bearer Token 化（Cookie 自動送信を使わない）、③ は CSRF トークン + `SameSite=Lax` + Origin/Referer 検証。① ④ は止められないので「ログイン済みユーザーが踏むことを前提」に防御する
+> 2. **No**。理由:
+>     - Bearer Token を `Authorization` ヘッダで送る場合は JS が明示的に付与するため CSRF は原理的に成立しない
+>     - しかし JWT を `HttpOnly` Cookie に保存して**自動送信**させる構成にした瞬間、Cookie 認証と同じ CSRF リスクが発生する
+>     - 「JWT だから安全」ではなく、「**トークンの送信方法（明示的ヘッダ vs 自動 Cookie）**」が決め手。Cookie に保存するなら CSRF トークンや SameSite による補強が必要
+> 3. **3 つの問題**:
+>     - **`POST /api/webhooks/github` の CSRF 除外が認証なし** — CSRF 保護を外すこと自体は妥当（外部からの正規リクエストなのでトークンを持たせられない）だが、その代わりに `X-Hub-Signature-256` で HMAC 署名検証を入れるべき。現状は誰でも `/api/webhooks/github` に POST できる
+>     - **`GET /api/balance/refresh` で副作用** — ログ書き込みと残高再計算が走るのに GET を使っている。`<img src="https://bank.com/api/balance/refresh">` だけで攻撃される。**POST に変更**し、CSRF 保護を適用する。「読み取り専用に見える」名前と実態の乖離は典型的な落とし穴
+>     - **GET ルート全般に CSRF 保護がない設計** — 上記が直っていれば構造的には正しいが、コードレビュー時には「副作用のある GET が他に紛れていないか」を `/review-ai-code` で横断確認するとよい
+>     - 修正後: `app.post('/api/balance/refresh', doubleCsrfProtection, refreshBalance)`、`/api/webhooks/github` は HMAC 検証ミドルウェアを通す
 
 ## 学習メモ
 

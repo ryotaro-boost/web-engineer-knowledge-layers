@@ -1,14 +1,29 @@
 ---
 layer: 6
 topic: DoS攻撃とDDoS攻撃
-type: topic
 status: 🔴 未着手
 created: 2026-04-09
+prerequisites: ["[[TCP-IP]]", "[[CDN]]", "[[ロードバランシング]]"]
+next_steps: ["[[最小権限の原則]]", "[[モニタリング]]", "[[非同期処理とメッセージキュー]]"]
+difficulty: advanced
+estimated_minutes: 35
+ai_collaboration: minimal
 ---
 
 # DoS攻撃とDDoS攻撃（Denial of Service / Distributed Denial of Service）
 
 > **一言で言うと:** DoS（Denial of Service）はサーバーやネットワークのリソースを枯渇させ、正規ユーザーへのサービス提供を妨げる攻撃。DDoS（Distributed DoS）は多数の踏み台（ボットネット）を使った分散型で、攻撃元の特定・遮断が極めて困難。単一の銀の弾丸はなく、[[CDN]]・[[ロードバランシング]]・[[レート制限]]を組み合わせた**多層防御**で対処する。
+
+## 3分で全体像
+
+- **何を解決する技術か:** CIA トライアドのうち**可用性（Availability）**を直接攻撃する DoS / DDoS から事業を守る。攻撃成立に脆弱性が不要で、正規プロトコルの大量使用だけで成り立つため、**侵入検知や脆弱性管理では検知も防御もできない**ことを認識しながら多層防御を構築する
+- **代表的な使用シーン:** EC・SaaS・ゲーム・メディアサイトなど可用性が事業価値に直結するサービス、Black Friday / セール期、新作リリース、大規模イベント、競合・抗議活動の標的になる組織、Webhook 受信エンドポイント
+- **これだけは覚える3つ:**
+    1. **DDoS は「経済学の問題」、技術解決ではない** — 攻撃側 1 台 vs ボット数万台の**コスト非対称戦**。スケールアウトでは構造的に負けるため、**CDN/上流で攻撃トラフィックを吸収する**前提のアーキテクチャを作る。「サーバーを増強すれば耐えられる」発想は財務的に持続不可能
+    2. **OSI 層別に対処法が違う** — L3/L4 ボリューム型（UDP/SYN Flood・増幅攻撃）は **CDN/ISP の上流**でしか止まらない。L7（HTTP Flood / Slowloris）は **WAF + レート制限 + アプリ層タイムアウト**。プロトコル悪用は **OS カーネル設定**。「とりあえずレート制限」では帯域型 DoS に無力
+    3. **「侵入を伴わない攻撃」** — IDS/IPS、SAST、脆弱性スキャナでは検知できない。**接続数・接続継続時間・p99 レイテンシ・5xx 率**といったアプリ層メトリクスのベースライン取得が異常検知の前提。Slowloris は帯域監視では一切見えない
+- **AIに任せやすいか:** **人間判断が要る** — Nginx の Slow HTTP 設定、`express-rate-limit` 導入、SYN Cookie 有効化のような**個別対策の実装**は AI に任せられる。一方で「**多層防御アーキテクチャの設計**」「**CDN/WAF ベンダー選定**」「**Under Attack Mode の発動判断**」「**ASN ブロックの是非**」「**ランブック整備**」は経験則と事業判断が必須で AI には不向き
+- **詰まったらここを読む:** [[CDN]] / [[ロードバランシング]] / [[レート制限]] / [[モニタリング]]
 
 ## なぜ必要か
 
@@ -203,16 +218,76 @@ flowchart TD
 | 攻撃検知時に手動で設定変更 | 攻撃は数分で終わることもあれば数時間続くこともある | 自動緩和（Cloudflare Under Attack Mode 等）と Runbook の併用 |
 | ヘルスチェックエンドポイントを高負荷時に止める設計 | LB が「全サーバー死亡」と判定して全停止する | ヘルスチェックは軽量・優先処理、過負荷時もレスポンス可能に |
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| DoS 対策として「IP ブロックリスト」をハードコードで生成 | CGNAT・モバイル回線・IPv6 で誤爆、Botnet の数万 IP に対応不可能 | ASN 評価や Bot 検知サービスに委譲する設計を提案させる |
-| 「とりあえず全エンドポイントに CAPTCHA」を提案 | UX 破壊、本質的な Bot 検知の代替にはならない、視覚障害ユーザー排除 | リスクの高いエンドポイント（ログイン・登録）に限定し、Invisible CAPTCHA や JS チャレンジを併用 |
-| WAF ルールを LLM が網羅的に生成 | 偽陽性で正規ユーザーを締め出す、ルールの妥当性検証不能 | 検知（log only）モードから始めて統計を取り、段階的に enforce |
-| 「DoS 対策 = レート制限」と短絡する生成コード | 帯域型 DoS には無力、Slowloris にも効かない | レート制限は L7 対策の1つに過ぎず、CDN/WAF が前提であることを明示 |
-| エラー時に詳細なスタックトレースを返すコード | 攻撃者がエラー誘発で情報収集、エラー応答自体が高コスト | 本番ではエラーは汎用化、エラー応答は静的・軽量に |
-| リトライを exponential backoff なしで生成 | 過負荷障害時にクライアントが攻撃側になる（自滅型 DDoS） | クライアント側にも jitter 付き backoff を必ず実装 |
+| Nginx / Envoy のタイムアウト・接続数制限設定 | 実装は AI（`client_header_timeout` / `limit_conn` / `client_max_body_size`） | 値の選定（10s / 100req/s / 1MB 等）はトラフィック特性に応じて人間が決定 |
+| `express-rate-limit` / `slowapi` の導入 | 設定とミドルウェア配置は AI 委任 | レート上限値、IP/トークンキー設計、フェイルオープン/クローズの方針 |
+| SYN Cookie / `tcp_max_syn_backlog` の sysctl 設定 | 値の提案と適用スクリプトは AI が書ける | 本番カーネルへの適用判断、サービス特性との整合性 |
+| クライアント側 retry の jitter 付き exponential backoff | 実装テンプレートは AI 委任 | リトライ対象エラーの分類（5xx / 429 / ネットワーク） |
+| `/health` エンドポイント設計 | 「軽量だが疎通確認は含む」のテンプレート実装 | 過負荷時の挙動（依存先 DB が遅い時に health を落とすか維持するか）の方針決定 |
+| Cloudflare / AWS Shield のヘッダ受け取りロジック | 実装は AI（`CF-Connecting-IP` / `True-Client-IP` の信頼） | trust proxy の段数決定、CDN ベンダー選定、Under Attack Mode の発動条件 |
+| WAF ルールの生成（OWASP CRS ベース） | 初期ルールセットの提案は AI 任せ | 偽陽性検証、log only → enforce の段階移行判断、誤検知対応 |
+| ランブック整備 | 雛形ドキュメント生成は AI 委任 | エスカレーション手順、ベンダー連絡先、組織責任分界 |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **「DoS 対策 = レート制限」で完結していないか** — レート制限は L7 対策の 1 層に過ぎず、帯域型 DoS や Slowloris には効かない。CDN/WAF が前提のアーキテクチャになっているか、`/health` が軽量か、コネクションタイムアウトが設定されているかを併せて確認
+2. **クライアント retry の暴走リスク** — `await retry(fn, { retries: 100 })` のようなコードは過負荷時に自滅型 DDoS になる。**jitter 付き exponential backoff** + `Retry-After` ヘッダ尊重 + 最大試行回数の妥当性をレビュー
+3. **エラーレスポンスのコスト** — 5xx で詳細スタックを返す / 重い JSON を返す / DB に書き込むコードは、攻撃時にエラー応答自体が高コストになる。**エラーは汎用化・静的・軽量**に。攻撃時にログ出力が爆発しないかも確認
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提（プロジェクトの状況・既存のコード規約）
+- 構成: Cloudflare → ALB → ECS Fargate (Express 5) → RDS Aurora
+- 平常時 RPS: 50, ピーク 500, p99 レイテンシ 200ms
+- 認証: Cookie 認証、ログインは /api/auth/login（POST）
+- 観測: Datadog APM + CloudWatch、PagerDuty 連携あり
+
+# やってほしいこと
+- /api/auth/login のブルートフォース対策と、全 API への基本的なレート制限を追加する
+
+# 守ってほしい制約（このトピック固有のもの）
+- /api/auth/login: IP + email の複合キーで 5 req/min、超過は 429 + Retry-After
+- 全 API: IP キーで 100 req/min（認証済みユーザーは緩和）
+- レート制限ストア: Redis（既存 ElastiCache を使用）。Redis 障害時はフェイルオープン（許可）
+- 本番でも `/health` は除外、レート制限ヘッダ X-RateLimit-* を返す
+
+# 完了の判断基準
+- 同一 IP から /api/auth/login に 6 回連続失敗で 429 が返る
+- Redis 切断時にもアプリは応答し続ける（ログには警告を出す）
+- /health に 1000 req/min 投げてもレート制限されない
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| DoS 対策として「IP ブロックリスト」をハードコードで生成 | CGNAT・モバイル回線・IPv6 で誤爆、Botnet の数万 IP に対応不可 | ASN 評価や Bot 検知サービス（Cloudflare / Akamai）に委譲 |
+| 「とりあえず全エンドポイントに CAPTCHA」を提案 | UX 破壊、視覚障害ユーザー排除、Bot 検知の代替にならない | リスクの高いエンドポイント（ログイン・登録）に限定し、Invisible CAPTCHA / JS チャレンジ |
+| WAF ルールを LLM が網羅的に生成 | 偽陽性で正規ユーザーを締め出す、妥当性検証不能 | 検知（log only）モードから開始し、統計を取って段階的に enforce |
+| 「DoS 対策 = レート制限」と短絡 | 帯域型 DoS / Slowloris に無力 | CDN/WAF/タイムアウト/オートスケールと組み合わせる多層防御 |
+| エラー応答に詳細スタックトレース | 情報漏洩 + 応答コスト増 | 本番ではエラーは汎用化、ログはサーバー側のみ |
+| クライアント retry を exponential backoff なしで生成 | 過負荷時に自滅型 DDoS | jitter 付き backoff + 最大試行回数 + `Retry-After` 尊重 |
+| `/health` で全テーブル `SELECT COUNT(*)` | 攻撃時にヘルスチェック自体が DB を殺す | 軽量化 + 詳細は別エンドポイント |
+| アプリサーバーで全 DDoS を捌こうとする | スケール限界・コスト勝負で必ず負ける | CDN / 上流で吸収する前提のアーキテクチャ |
+| 攻撃検知時に手動で設定変更する運用 | 攻撃は数分〜数時間で終わるため間に合わない | 自動緩和（Cloudflare Under Attack Mode 等）+ Runbook |
+| ヘルスチェックを高負荷時に止める | LB が「全サーバー死亡」と判定して全停止 | ヘルスチェックは軽量・優先処理、過負荷時もレスポンス可能に |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -341,6 +416,64 @@ DoS/DDoS 攻撃の**実行**は日本国内では複数の法律で犯罪とな�
 - [RFC 4732 — Internet Denial-of-Service Considerations](https://datatracker.ietf.org/doc/html/rfc4732) — IETF による設計上の考慮事項
 - [AWS Best Practices for DDoS Resiliency](https://docs.aws.amazon.com/whitepapers/latest/aws-best-practices-ddos-resiliency/welcome.html) — クラウド環境での実装パターン
 - [OWASP Slow HTTP Attacks](https://owasp.org/www-community/attacks/Slow_HTTP_Headers_DoS_Attack) — Slow HTTP の詳細
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. 「自社のサーバーを大幅にスケールアウトすれば DDoS を捌ける」は構造的に正しいか。Yes / No と、コスト非対称性の観点から説明せよ。
+2. SYN Flood と Slowloris と HTTP Flood は、それぞれ OSI のどの層を攻撃するか。検知のための監視メトリクスは何が違うかを述べよ。
+3. 次のコードは Express でのレート制限実装である。DoS 対策として何が不足しているか、どのような追加対策が必要かを述べよ。
+   ```typescript
+   import rateLimit from 'express-rate-limit';
+
+   app.use(rateLimit({ windowMs: 60_000, max: 1000 }));
+
+   app.get('/health', async (req, res) => {
+     const userCount = await db.user.count();
+     const orderCount = await db.order.count();
+     const productCount = await db.product.count();
+     res.json({ ok: true, users: userCount, orders: orderCount, products: productCount });
+   });
+
+   app.post('/api/search', async (req, res) => {
+     try {
+       const results = await db.product.findMany({
+         where: { name: { contains: req.body.q } }, // 全文走査
+         take: 10000, // 上限は大きめに
+       });
+       res.json(results);
+     } catch (e) {
+       res.status(500).json({ error: e.stack }); // デバッグしやすく
+     }
+   });
+   ```
+
+> [!note]- 解答の指針
+>
+> > [!info] 用語ミニ辞典
+> > - **コスト非対称性**: 攻撃側 1 ドルで何ドル分の被害を与えられるかの比率。DDoS では攻撃側がレンタル C2 で 1 万円程度のところ、防御側は CDN 帯域・サーバー増強で数百万円のコストを払うことが珍しくない。**コスト勝負では構造的に防御側が負ける**ため、CDN/上流で吸収する経済学的選択をする
+> > - **SYN Cookie**: TCP 3-way handshake の SYN を受けた時点ではサーバー側に状態を持たず、ACK を受けた時点で逆算で接続を作る Linux カーネルの機能。half-open 接続テーブルが溢れない（SYN Flood への恒久対策）
+> > - **Slowloris**: HTTP リクエストヘッダを「1 バイトずつ」「数秒おきに」送ってコネクションを長時間専有する低帯域 L7 攻撃。Apache prefork は数百クライアントで枯渇する。Nginx の `client_header_timeout` で短い時間制限を入れるのが基本対策
+> > - **Under Attack Mode（Cloudflare）**: エッジで全リクエストに JS チャレンジを挟むモード。Bot は JS を実行できないため大半が脱落する。初回レイテンシが増える代わりに**緊急時の退避策**として有効
+> > - **冪等性（Idempotency）**: 同じリクエストを何度繰り返しても結果が変わらない性質。クライアント retry が安全に行える前提条件で、`Idempotency-Key` ヘッダや UUID で識別する
+> > - **フェイルオープン / フェイルクローズ**: レート制限ストア（Redis 等）が落ちた時に「許可（オープン）」するか「拒否（クローズ）」するかの方針。**先に決めておく**べき事業判断で、可用性優先ならオープン、セキュリティ優先ならクローズ
+>
+> 1. **No**。理由:
+>     - DDoS は **コスト非対称戦**。攻撃側はレンタル Botnet で 1 万円程度、防御側は CDN 帯域 + サーバー増強で数百万円〜数千万円。スケールアウトしても**攻撃側のコスト増は微々たるもの**で、防御側が破産する
+>     - **攻撃トラフィックを CDN/ISP の上流で吸収**するアーキテクチャが本質。CDN は世界中のエッジに帯域を持つため、1 顧客あたりのコストが下がる。「自前の数台で頑張る」のではなく「世界規模の防衛網に乗せる」のが現代の解
+>     - 例外的に「L7 アプリ層攻撃」「内部の重いクエリ濫用」はオートスケールで吸収できる範囲もあるが、L3/L4 ボリューム型は物理的に上流でしか止まらない
+> 2. **層と監視メトリクス**:
+>     - **SYN Flood: L4（トランスポート層）** — half-open 接続テーブルを溢れさせる。監視は **TCP 接続状態カウンタ（`netstat | grep SYN_RECV`）** や `tcp_max_syn_backlog` の利用率。SYN Cookie 有効化で OS カーネルが対処
+>     - **Slowloris: L7（アプリ層・低帯域）** — 帯域消費はゼロに近く、ヘッダ受信に長時間かける。監視は**接続継続時間の p95/p99・同時接続数・各ワーカーの占有時間**。帯域監視（Mbps）グラフでは何も見えない
+>     - **HTTP Flood: L7（アプリ層・高 RPS）** — 正規 GET/POST を大量送信。監視は **RPS・5xx 率・p99 レイテンシ・DB クエリ数**。レート制限と WAF で対処
+>     - 共通: **平常時のベースラインを取得しておく**ことが異常検知の前提
+> 3. **不足している対策**:
+>     - **`/health` が重い** — 3 つのテーブルで `COUNT(*)` を実行している。攻撃時にヘルスチェック自体が DB を殺す。**`res.json({ ok: true })` のみに軽量化**し、詳細は別エンドポイント（`/health/detailed`、内部のみアクセス可）に分離。LB のヘルスチェック対象は軽量側
+>     - **`/api/search` が重いクエリ濫用に弱い** — `take: 10000` で大量データ、`contains` で全文走査。**ページネーション必須**（`take: 50` + cursor）、検索インデックス（PostgreSQL の `pg_trgm` / Elasticsearch）を使う、専用のレート制限を別途設定（`rateLimit({ max: 30 })`）
+>     - **エラー応答に `e.stack`** — 情報漏洩 + 応答ペイロード増。本番では `res.status(500).json({ error: 'internal_error' })` のみ、詳細はサーバーログ
+>     - **グローバルレート制限 1000 req/min が緩すぎ** — 認証エンドポイントには別途厳しい制限が必要（5 req/min など）。複合キー（IP + email）でブルートフォース対策
+>     - **CDN/WAF の前提が見えない** — 帯域型 DoS（UDP Flood / 増幅攻撃）はこの実装では一切防げない。Cloudflare / AWS Shield 配下である前提を明示し、オリジン IP を直接公開しない設計（CDN ベンダーの IP レンジのみ受け付け）にする
 
 ## 学習メモ
 

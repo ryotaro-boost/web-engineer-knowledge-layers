@@ -1,14 +1,29 @@
 ---
 layer: 6
 topic: XSS
-type: topic
 status: 🔴 未着手
 created: 2026-03-30
+prerequisites: ["[[HTTP-HTTPS]]", "[[DOMと仮想DOM]]", "[[HTML-CSS-JS]]"]
+next_steps: ["[[CSRF]]", "[[CORS]]", "[[最小権限の原則]]"]
+difficulty: intermediate
+estimated_minutes: 35
+ai_collaboration: partial
 ---
 
 # XSS（クロスサイトスクリプティング / Cross-Site Scripting）
 
 > **一言で言うと:** ユーザー入力がHTML/JavaScriptとして解釈されることで、攻撃者が他のユーザーのブラウザ上で任意のスクリプトを実行できてしまう攻撃。防御の本体は**出力時のコンテキスト別エスケープ**と**CSP（Content Security Policy）**。
+
+## 3分で全体像
+
+- **何を解決する技術か:** ユーザー入力（コメント・URLパラメータ・プロフィール等）が他者のブラウザで**実行可能なコード**として解釈される事故を防ぎ、Cookie 窃取・なりすまし・改ざん・キーロガー注入を構造的に止める
+- **代表的な使用シーン:** SNS / 掲示板 / EC のコメント表示、検索結果ページ、URL 共有機能、CMS のリッチテキスト投稿、`location.hash` を読む SPA、Markdown レンダリング、サードパーティ HTML の埋め込み（広告・分析タグ）
+- **これだけは覚える3つ:**
+    1. **防御の本体は「出力時のコンテキスト別エスケープ」** — 入力時サニタイズは補助。HTML / 属性 / JS / URL / CSS で必要なエスケープが違うため、**テンプレートエンジン（React・Vue・html/template・Jinja2）の自動エスケープに乗る**のが安全。`innerHTML` / `dangerouslySetInnerHTML` / `v-html` はバイパス経路
+    2. **CSP は多層防御の追加層、エスケープの代替ではない** — `'unsafe-inline'` を許可すると CSP の意味は失われる。nonce / hash ベースで設計し、`report-uri` / `report-to` で違反を検知する
+    3. **XSS が成功すると CSRF 防御も無効化される** — ページ内の CSRF トークンを盗めるため、XSS は CSRF の上位互換。HttpOnly Cookie でも Cookie が自動送信される性質は変わらないので、攻撃者は被害者ブラウザから API を直接叩ける
+- **AIに任せやすいか:** **一部任せられる** — テンプレートエンジン経由の出力・DOMPurify 適用・CSP ヘッダ設定など定型実装は AI が高品質に書ける。一方で「`href` 属性の `javascript:` スキーム検証」「JSON 文字列の HTML 埋め込み」「`<style>` 内のユーザー入力」など**コンテキスト別の判断**は人間がレビュー必須。AI は `innerHTML` を平然と提案するため、**生成コード中の HTML 文字列構築箇所は必ず疑う**
+- **詰まったらここを読む:** [[CSRF]] / [[CORS]] / [[バリデーション]] / [[コンポーネント設計]]
 
 ## なぜ必要か
 
@@ -216,14 +231,72 @@ CSP設計の原則:
 | 正規表現で自作HTMLサニタイザー | HTMLの構文解析は正規表現では不可能 | DOMPurify、bluemonday等の実績あるライブラリを使用 |
 | CSPに `'unsafe-inline'` を指定 | インラインスクリプトが実行でき、CSPの意味がなくなる | nonce ベースの許可に移行 |
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
+|---|---|---|
+| テンプレートエンジン経由の出力（React JSX / Jinja2 `{{ }}` / `html/template`） | 実装・レビュー両方 AI 委任。`/review-ai-code` で `innerHTML` / `dangerouslySetInnerHTML` / `v-html` の検出を依頼 | 「ユーザーが Markdown / HTML 投稿できる仕様」かどうかの**仕様判断** — 受け入れる場合のみ DOMPurify 等を導入 |
+| CSP ヘッダ生成（helmet / `Content-Security-Policy`） | 実装は AI、レビューも `'unsafe-inline'` / `'unsafe-eval'` の混入を AI に検出させる | nonce 戦略の選定（リクエストごと vs ビルド時 hash）、外部ドメイン許可リストの妥当性 |
+| DOMPurify / sanitize-html の適用 | 実装は AI。設定オプションのレビューも AI に任せられる | 「どこまで HTML タグを許可するか」のビジネス判断（`<iframe>` 許可可否など） |
+| `href` / `src` 属性のプロトコル検証 | パターン実装は AI（`/^https?:\/\//` 等） | 許可するスキームの方針（`mailto:` / `tel:` を許すか） |
+| エスケープ漏れの静的解析（ESLint `react/no-danger`、Semgrep） | ルール選定とCI組み込みを AI に任せる | 既存コードへの段階導入計画、ノイズの多いルールの除外判断 |
+| 攻撃ベクトルの再現テスト（Playwright で `<script>alert(1)</script>` 注入） | テストコード生成を AI に任せる | テスト対象エンドポイントの優先順位（被害インパクトの高い順） |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **HTML 文字列を `+` / テンプレートリテラルで結合していないか** — `` `<h1>${query}</h1>` `` のような構築は AI が書きがち。テンプレートエンジン経由か DOM API（`createTextNode` / `textContent`）に置き換える
+2. **`dangerouslySetInnerHTML` / `v-html` / `innerHTML` の使用箇所に DOMPurify 等のサニタイズが入っているか** — AI は「動かす」ことを優先して素のまま使うことが多い。やむを得ず使う場合は必ずサニタイズを噛ませ、許可タグの allowlist を明示する
+3. **`href` / `src` 属性にユーザー入力を直接渡していないか** — `javascript:` スキームによる XSS は AI が見落としがち。プロトコルを `https?:` / `mailto:` 等の allowlist で検証してから埋め込む
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提（プロジェクトの状況・既存のコード規約）
+- フレームワーク: React 18 / Next.js 14 (App Router)
+- ユーザー入力: コメント本文（プレーンテキストのみ受け付け、Markdown は不可）
+- 既存の CSP: default-src 'self'; script-src 'self' 'nonce-{nonce}'
+- HttpOnly + Secure + SameSite=Lax の Cookie でセッション管理
+
+# やってほしいこと
+- コメント投稿フォームと一覧表示画面を実装する
+
+# 守ってほしい制約（このトピック固有のもの）
+- ユーザー入力は JSX の `{}` 補間のみで描画し、`dangerouslySetInnerHTML` は禁止
+- URL 入力欄（プロフィールリンク等）は `https?:` のみ許可、それ以外は `#` にフォールバック
+- 改行は `<br>` ではなく CSS の `white-space: pre-wrap` で表現
+- フロント側の入力長制限はあくまで UX 目的で、サーバー側でも検証する
+
+# 完了の判断基準
+- `<script>alert(1)</script>` を投稿してもテキストとして表示されること
+- `javascript:alert(1)` をプロフィールリンクに入力してもクリックで実行されないこと
+- 既存の CSP ヘッダに `'unsafe-inline'` を追加していないこと
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
 |---|---|---|
 | `innerHTML` や `v-html` でユーザー入力を描画 | テンプレートの自動エスケープをバイパスする | `textContent` を使うか、必要なら DOMPurify でサニタイズ後に使用 |
-| XSS対策としてフロントのみでサニタイズ | 攻撃者はフロントをバイパスしてAPIを直接叩ける | サーバーサイドで出力時エスケープ。フロントのサニタイズはUX目的 |
-| テンプレートリテラルでHTMLを組み立て | バッククォート内の `${variable}` は文字列結合と同じ | テンプレートエンジンを使用するか、DOM APIで要素を構築 |
-| CSPだけに依存してエスケープを省略 | CSPは追加防御であり設定ミスで無効になりうる | エスケープが主防御、CSPは多層防御の一層 |
+| XSS対策としてフロントのみでサニタイズ | 攻撃者はフロントをバイパスして API を直接叩ける | サーバー側で出力時エスケープ。フロントのサニタイズは UX 目的に限定 |
+| テンプレートリテラルで HTML を組み立て | バッククォート内の `${variable}` は文字列結合と同じ | テンプレートエンジンか DOM API（`createElement` / `textContent`）で構築 |
+| CSP だけに依存してエスケープを省略 | CSP は追加防御であり、設定ミスで無効になりうる | エスケープが主防御、CSP は多層防御の一層 |
+| 入力時に HTML エスケープして DB 保存 | 出力コンテキストが変わると二重エスケープ・データ汚染が発生 | 生データを保存し、出力時にエスケープする |
+| 正規表現で自作 HTML サニタイザー | HTML の構文解析は正規表現では不可能、`<img onerror>` 等のバイパスを見逃す | DOMPurify / sanitize-html / bluemonday 等の実績ライブラリを使用 |
+| `href={url}` にユーザー入力をそのまま渡す | `javascript:` スキームでクリック時に任意コード実行 | `https?:` `mailto:` 等の allowlist で検証してから渡す |
+| `JSON.stringify(data)` を `<script>` に直接埋め込む | `</script>` を含むデータで script タグが閉じられる | JSON 用エスケープ（`<` → `<` 等）を行うか、`<script type="application/json">` 経由で `JSON.parse` |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -402,6 +475,49 @@ el.appendChild(text);
 - OWASP Content Security Policy Cheat Sheet — CSP設計の実践ガイド
 - PortSwigger Web Security Academy — XSSのハンズオン学習環境（無料）
 - MDN Web Docs: Content Security Policy (CSP) — CSPディレクティブの公式リファレンス
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. XSS 防御の「主防御」は何か。サニタイズ・CSP・HttpOnly Cookie ではない理由を一言ずつ添えて説明せよ。
+2. 「React を使っているから XSS は起きない」は正しいか。Yes / No と、その判断の根拠を 2 つ挙げよ。
+3. 次のコードはコメント本文を表示する Express + EJS のハンドラである。XSS 観点で **3 箇所以上の問題を指摘し**、それぞれどう直すべきかを述べよ。
+   ```typescript
+   app.get('/comments/:id', async (req, res) => {
+     const c = await db.comment.findUnique({ where: { id: req.params.id } });
+     res.send(`
+       <article>
+         <h2>${c.title}</h2>
+         <p>${c.body}</p>
+         <a href="${c.authorUrl}">投稿者: ${c.authorName}</a>
+       </article>
+     `);
+   });
+   ```
+
+> [!note]- 解答の指針
+>
+> > [!info] 用語ミニ辞典
+> > - **コンテキスト別エスケープ**: HTML 本文 / 属性値 / JavaScript 文字列 / URL / CSS で「危険な文字」が違うため、出力先のコンテキストに応じてエスケープルールを変えること。テンプレートエンジンの自動エスケープは HTML 本文用が中心で、属性値や URL では追加対応が必要なケースもある
+> > - **`dangerouslySetInnerHTML`**: React で生 HTML を埋め込む API。名前が「dangerously」と付いているのは、自動エスケープを意図的にバイパスするから。本来は信頼済みの HTML（DOMPurify でサニタイズした出力など）にしか使ってはいけない
+> > - **CSP（Content Security Policy）**: HTTP レスポンスヘッダ `Content-Security-Policy` でブラウザに「どのオリジンのスクリプト・スタイルを実行してよいか」を宣言する仕組み。`'unsafe-inline'` を許可するとインラインスクリプトの実行を許してしまい、XSS 防御として機能しなくなる
+> > - **nonce**: リクエストごとに生成するランダム文字列。CSP で `script-src 'nonce-xxx'` と指定すると、`<script nonce="xxx">` だけが実行を許可される。攻撃者は nonce を知らないため、注入したスクリプトは実行されない
+> > - **`javascript:` スキーム**: URL の先頭に書くと、クリック時に JavaScript コードとして実行される古い仕様。`<a href="javascript:alert(1)">` で XSS が成立する典型例
+>
+> 1. **主防御は「出力時のコンテキスト別エスケープ」**。理由は、XSS の根本原因が「データが実行可能なコードとして解釈されること」であり、出力時にデータを「ただの文字」として明示することで原理的に分離できるから。
+>     - **入力時サニタイズ**は補助的防御。新しい攻撃ベクトル（`<svg onload=...>` 等）を見逃しうるうえ、出力先コンテキストが変わると効果が変わる（HTML では安全でも JavaScript 文字列では危険）
+>     - **CSP** はあくまで多層防御の追加層。`'unsafe-inline'` を許可してしまうと意味がないし、設定漏れもありうる
+>     - **HttpOnly Cookie** は被害軽減（Cookie 窃取の防止）であって、XSS 自体は止まらない。ページ改ざんやキーロガー、被害者ブラウザ経由の API 呼び出しは依然可能
+> 2. **No**。React は JSX の `{}` 補間で値を**自動エスケープ**するため**基本的には**安全だが、次の経路では XSS が成立する:
+>     - **`dangerouslySetInnerHTML`** — 自動エスケープをバイパスする。Markdown 表示などで使う場合は DOMPurify のサニタイズ必須
+>     - **`href` 属性に `javascript:` スキーム** — JSX は属性値も文字列補間としてエスケープするが、`javascript:alert(1)` のようなスキーム自体は文字列として有効に渡る。プロトコルを `https?:` の allowlist で検証する必要がある
+>     - 補足: Vue の `v-html`、Angular の `[innerHTML]` も同様の経路。「フレームワークが守ってくれる」のは「テンプレートの値補間」だけ
+> 3. **テンプレートリテラルで HTML を組み立てており、3 箇所すべてが XSS 経路**:
+>     - `${c.title}` `${c.body}` — `<script>` や `<img onerror>` を含むコメントを保存・表示すると Stored XSS。**EJS / Handlebars 等のテンプレートエンジン経由**で `<%= %>` のような自動エスケープ補間に変える
+>     - `${c.authorName}` — 同上、属性値ではないが本文として注入される
+>     - `${c.authorUrl}` — `href` 属性の値として補間されるため、`javascript:alert(document.cookie)` を保存されると XSS。`new URL(c.authorUrl).protocol` を `https?:` で検証してから埋め込み、不正なら `#` にフォールバックする
+>     - 修正例: `res.render('comment', { c })` でテンプレート側を `<%= c.title %>` `<%= c.body %>` `<%= safeUrl(c.authorUrl) %>` に置き換える。サーバー応答に `Content-Security-Policy` も付与しておくと多層防御になる
 
 ## 学習メモ
 
