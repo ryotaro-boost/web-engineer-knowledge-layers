@@ -167,7 +167,7 @@ graph TB
 | ペイロード | サーバー側に保持（サイズ制限なし） | トークンに埋め込み（肥大化に注意） |
 | セキュリティリスク | セッションハイジャック（Cookie窃取） | トークン漏洩（localStorage保存時のXSSリスク） |
 | 適した用途 | SSR、伝統的Webアプリ | SPA、モバイルアプリ、マイクロサービス間通信 |
-| CSRF耐性 | Cookie自動送信のためCSRF対策が必要 | Authorizationヘッダ送信なら自動送信されずCSRFに強い |
+| CSRF耐性 | Cookie自動送信のためCSRF対策が必要 | **Authorization ヘッダで送る場合のみ** 自動送信されずCSRFに強い。**HttpOnly Cookie に保存した場合は Cookie 同様 CSRF 対策（SameSite / CSRF トークン）が必要** |
 
 ## コード例
 
