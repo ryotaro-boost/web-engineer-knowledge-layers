@@ -329,7 +329,7 @@ app.listen(3000);
 
 ### GraphQL API — Apollo Server（Node.js）
 
-> **Apollo Server バージョン:** Apollo Server **v4 は 2026-01 に EOL**。本コードは **Apollo Server 5（2025年GA）** 想定。v4 と v5 は API がほぼ互換だが、v5 では Node.js 20 以降が必須となり、内部の Express 依存も Express 5 ベースに切り替わった。新規導入は v5 を選ぶ。
+> **Apollo Server バージョン:** Apollo Server **v4 は 2026-01-22 に EOL**。本コードは **Apollo Server 5（2025年GA）** 想定。v4 と v5 は API がほぼ互換だが、v5 では Node.js 20 以降が必須となり、内部の Express 依存も Express 5 ベースに切り替わった。新規導入は v5 を選ぶ。
 
 ```javascript
 // Apollo Server 5
