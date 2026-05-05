@@ -71,6 +71,25 @@ Phase 1〜4の段階的学習。下位レイヤーから積み上げ、依存関
 | コマンド | 説明 | 使用例 |
 |---------|------|--------|
 | `/study-topic` | トピックドキュメントを生成 | `/study-topic Layer0 データ構造とアルゴリズム` |
-| `/create-detail` | 末端知識ドキュメント（details/）を生成。内容指定から最適なファイル名・構成に変換される | `/create-detail データ構造とアルゴリズム スタック` |
-| `/review-layer` | レイヤー内の全ドキュメントを事実誤り・最新性・補足情報の観点でレビュー | `/review-layer Layer0` |
-| `/review-detail` | 末端知識ドキュメント単体を正確性・最新性・品質・構造の観点でレビュー | `/review-detail CORS` |
+| `/create-detail` | 末端知識ドキュメント（details/）を生成 | `/create-detail データ構造とアルゴリズム スタック` |
+| `/review-layer` | レイヤー内の全ドキュメントを横断レビュー | `/review-layer Layer0` |
+| `/review-detail` | 末端知識ドキュメント単体をレビュー | `/review-detail CORS` |
+| `/explain-3min` | トピックの「3分で全体像」を生成・提案 | `/explain-3min HTTP-HTTPS` |
+| `/refactor-topic` | 密度突出節を抽出し details 切り出し提案 | `/refactor-topic RDB` |
+| `/review-ai-code` | AI生成コードを関連トピック観点でレビュー | コードを渡す |
+| `/design-prompt` | 機能要件からAIへのプロンプト雛形を生成 | 要件を渡す |
+| `/quiz` | 5問の理解度クイズを動的生成 | `/quiz HTTP-HTTPS` |
+| `/diagnose` | 症状から関連レイヤー・トピックへの追跡を案内 | `/diagnose APIが遅い` |
+| `/anti-pattern-scan` | コードを `_anti-patterns/` 索引と全件照合 | コードを渡す |
+| `/glossary` | 用語集への用語追加・更新 | `/glossary WebSocket` |
+| `/starter-path` | 学習者の状況に応じてパス・週次プランをパーソナライズ | 状況を自然言語で渡す |
+
+## 学習導線
+
+学習を始めるなら **[[_starter/_index|スターターガイド]]** から。
+
+- [[_starter/00_最小学習パス|最小学習パス]] — 14トピック厳選ルート
+- [[_starter/01_週次プラン|週次プラン]] — 4週間の通読・再読プラン
+- [[_starter/02_実務症状からの逆引き|実務症状からの逆引き]] — 「APIが遅い」等から関連レイヤーへ
+- [[_glossary/用語集|用語集]] — 初学者が詰まりやすい用語の最低限辞書
+- [[_anti-patterns/_index|AI実装アンチパターン索引]] — レイヤー別 / パターン別の網羅索引
