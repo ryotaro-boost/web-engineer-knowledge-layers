@@ -3,11 +3,27 @@ layer: 5
 topic: Core Web Vitals
 status: 🔴 未着手
 created: 2026-03-29
+prerequisites: ["[[HTML-CSS-JS]]", "[[DOMと仮想DOM]]", "[[HTTP-HTTPS]]"]
+next_steps: ["[[CDN]]", "[[モニタリング]]", "[[パフォーマンス最適化]]"]
+difficulty: intermediate
+estimated_minutes: 35
+ai_collaboration: partial
 ---
 
 # Core Web Vitals
 
 > **一言で言うと:** Googleが定義したユーザー体験の3つの数値指標（LCP・INP・CLS）で、「表示速度」「操作応答」「視覚的安定性」を定量的に測定・改善する枠組み。
+
+## 3分で全体像
+
+- **何を解決する技術か:** 「サイトが速い/遅い」という主観を、**実ユーザーのフィールドデータ**による客観指標に置き換え、改善の優先順位とビジネス影響（SEO・コンバージョン）を定量化する
+- **代表的な使用シーン:** Web サイト全般のパフォーマンス計測・改善判断、PageSpeed Insights / CrUX / web-vitals ライブラリでの本番監視、SEO 施策の根拠付け、フロントエンド改修の効果測定、デプロイ前のラボ計測（Lighthouse）と本番フィールド計測の組み合わせ
+- **これだけは覚える3つ:**
+    1. **3指標は別の問題を見ている** — LCP（表示速度・主にバックエンド+リソース読み込み）、INP（操作応答性・主に JS の重さ）、CLS（視覚的安定性・主にレイアウト設計）。**1つの最適化で全部は改善しない**ので、どの指標が悪いかを見てから打ち手を選ぶ
+    2. **ラボデータとフィールドデータは別物** — Lighthouse はシミュレーション（ラボ）、Google が検索順位に使うのは実ユーザーの **CrUX**（フィールド）。Lighthouse 100点でもフィールドが悪ければ評価されない。`web-vitals` で本番収集が必須
+    3. **`loading="lazy"` を LCP 画像に付けてはいけない** — 全画像に一律 lazy を付ける AI 生成コードが頻発する。LCP 候補のヒーロー画像は `eager`（デフォルト）+ `fetchpriority="high"` で最優先取得すべき
+- **AIに任せやすいか:** **一部任せられる** — `web-vitals` 計装、`<img>` の `width` `height` 指定、`fetchpriority` 付与、Critical CSS 抽出など個別パターンは AI が高品質に書ける。一方で「**どの要素が LCP 候補か**」「**何が CLS の原因か**」は実機計測 + DevTools 分析が必須で、AI には判断不能。Lighthouse / DevTools の出力を読んで判断する人間側の能力が要る
+- **詰まったらここを読む:** [[CDN]] / [[HTTP-HTTPS]] / [[DOMと仮想DOM]] / [[パフォーマンス最適化]]
 
 ## なぜ必要か
 
@@ -156,13 +172,81 @@ SPA（Single Page Application）のLCPが悪くなりやすいのは事実だが
 | CSSの `@import` チェーン | 直列読み込みになりLCPが遅延 | `<link>` タグで並列読み込みにする |
 | アニメーションに `top`/`left` を使用 | レイアウト再計算が発生しINPが悪化 | `transform: translate()` を使い、合成（Compositing）レイヤーで処理 |
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
+> Core Web Vitals の **計装コード**（`web-vitals` の `onLCP` / `onINP` / `onCLS`）や **個別の最適化パターン**（`width`/`height` 指定、`fetchpriority`、`font-display: swap`）は AI に高品質に書かせやすい。一方で「**どの要素が実際に LCP 候補か**」「**何が CLS の原因か**」は **DevTools / Lighthouse / CrUX を実際に読む人間判断**が必須。AI は「全画像に `loading="lazy"`」「全コンポーネントに `React.memo`」「`requestIdleCallback` で全部包む」のような一律最適化を提案しがちで、`/review-ai-code` で必ず検出する。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| コンポーネントの全画像に `loading="lazy"` を一律適用 | LCP要素の遅延読み込みでスコア悪化 | ファーストビュー判定ロジックを入れるか、LCP候補にはpropsで制御する |
-| useEffectでのデータフェッチ後にレイアウトサイズが変わるUIを生成 | CLSが発生する | データフェッチ前にスケルトンUIで領域を確保する |
-| バンドルを分割せずに1つの巨大なJSファイルを生成 | メインスレッドが長時間ブロックされINPが悪化 | ルートベースのコード分割（dynamic import）を適用する |
+| `web-vitals` ライブラリの計装と分析基盤への送信実装 | AI 実装、`/review-ai-code` でレビュー | どの分析基盤に送るか（自社 BigQuery / Datadog / GA4）の判断は人間 |
+| `<img>` の `width`/`height` / `aspect-ratio` / `fetchpriority` の付与 | AI が網羅的に書く | LCP 候補画像の特定（DevTools の Performance パネル）は人間 |
+| Critical CSS の抽出と `<style>` インライン化 | AI に critical / critters 等の導入を任せる | CSP との衝突（`nonce` / `hash` 採用）は人間判断 |
+| CLS 対策のスケルトンUI / プレースホルダー実装 | AI が雛形を書く | 動的コンテンツ（広告・同意バナー・遅延 API）の挿入位置設計は人間判断 |
+| Long Task 検出と `requestIdleCallback` / Web Worker への切り出し | AI が雛形 | どこをオフロードすべきかは DevTools Profiler の実測結果から人間が選ぶ |
+| Lighthouse / PageSpeed Insights のスコア解釈 | AI に解説させる | スコア改善とコード変更コストのトレードオフは人間が判断 |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成のパフォーマンス最適化コードを受け取ったとき、最低限ここを見る。
+
+1. **`loading="lazy"` の一律適用と LCP 画像への誤付与** — `<img>` 全てに `loading="lazy"` を付けていないか。**ファーストビューの画像（特に LCP 候補のヒーロー画像）には付けてはいけない**。LCP 画像は `eager`（デフォルト）+ `fetchpriority="high"` + `<link rel="preload">` で最優先取得すべき。逆にファーストビュー外の画像にだけ `lazy` を限定する設計になっているか
+2. **CLS を生む動的コンテンツの挿入** — `useEffect` でデータフェッチ後にレイアウトサイズが変わる UI を生成していないか。スケルトン UI / `min-height` / `aspect-ratio` で**読み込み前にレイアウト領域を確保**する設計になっているか。広告・同意バナー・遅延 API レスポンスなど動的挿入されるコンテンツに対して、挿入位置にプレースホルダーを置いているか
+3. **INP を悪化させるメインスレッドブロック** — 同期的に重い計算（巨大配列の `.map`、JSON パース、正規表現）をメインスレッドで実行していないか。`requestIdleCallback` / `scheduler.yield()` / Web Worker への分割が適切に検討されているか。逆に**ボトルネックでもない場所に予防的に `requestIdleCallback` を撒く**過剰最適化になっていないかも確認
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提（プロジェクトの状況・既存のコード規約）
+- フレームワーク: Next.js 15 (App Router) / Remix / Astro / 生 HTML など
+- 計測基盤: web-vitals + 自社分析基盤 (BigQuery / Datadog) など
+- 現状の Core Web Vitals: LCP=3.2s (poor) / INP=180ms (good) / CLS=0.18 (needs improvement)
+- ターゲット: モバイル 4G 回線、低スペック端末を含む
+- LCP 候補要素: トップページのヒーロー画像 (1200x600 / WebP)
+
+# やってほしいこと
+- LCP を 2.5s 以下に改善するための具体的なコード変更
+- 効果測定のための前後比較プロトコル
+
+# 守ってほしい制約（このトピック固有のもの）
+- LCP 画像には `loading="lazy"` を付けない
+- 全画像に `width` / `height` / `aspect-ratio` を必ず指定（CLS 対策）
+- `fetchpriority="high"` は LCP 候補1枚のみ（複数枚に付けると効果が分散）
+- Critical CSS のインライン化は CSP の `nonce` / `hash` と整合させる
+- `requestIdleCallback` は実測でボトルネックが確認された箇所のみ
+- 計測は本番デプロイ後の web-vitals フィールドデータで判定（Lighthouse スコアだけで判断しない）
+- アクセシビリティ要件 (alt 属性、コントラスト比) を犠牲にしない
+
+# 完了の判断基準
+- web-vitals フィールドデータで p75 が「good」基準を満たす
+- DevTools Performance パネルで Long Task が 50ms 以下に分割されている
+- Lighthouse のラボスコア悪化がないこと（最低限の sanity check）
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| 全画像に `loading="lazy"` を一律適用 | LCP 要素まで遅延読み込みされ、スコアが悪化する | ファーストビュー判定ロジックを入れるか、LCP 候補は明示的に `eager` |
+| LCP 候補に `loading="lazy"` + `fetchpriority="high"` 併用 | `lazy` が優先され、`fetchpriority` の効果が打ち消される | LCP 候補は `eager` のまま `fetchpriority="high"` を付ける |
+| `useEffect` でデータフェッチ後にレイアウトサイズが変わる UI を生成 | CLS が発生し、ユーザーが誤タップする | スケルトン UI / `min-height` / `aspect-ratio` で領域を確保 |
+| `<img>` の `width` / `height` 未指定 | アスペクト比が確定せず CLS が発生 | 全 `<img>` に `width` / `height` または `aspect-ratio` を指定 |
+| バンドルを分割せず 1 つの巨大な JS ファイルを生成 | メインスレッドが長時間ブロックされ INP が悪化 | ルートベースのコード分割（`dynamic import`）+ `React.lazy` |
+| `requestIdleCallback` / Web Worker をボトルネック未確認のまま予防的に多用 | 制御フローの複雑化、デバッグ困難、効果は微小 | DevTools Profiler で Long Task を実測してから適用 |
+| Web フォントの `font-display` 未指定 | FOIT で長時間テキストが見えず LCP 悪化、または FOUT で CLS 発生 | `font-display: swap` + `<link rel="preload" as="font" crossorigin>` |
+| アニメーションに `top` / `left` を使用 | レイアウト再計算が発生し INP 悪化 | `transform: translate()` + `will-change` で合成レイヤー |
+| Critical CSS のインライン化を CSP `unsafe-inline` で許可 | XSS 防御を犠牲にする | `nonce` / `hash` ベースの CSP に対応する |
+| Lighthouse のスコアだけで完了判定 | ラボデータと実ユーザーのフィールドデータは乖離する | `web-vitals` で本番フィールドデータを必ず確認（CrUX / 自社分析） |
+| `<head>` に大量の同期 `<script>` | レンダーブロッキングで LCP が遅延 | `defer` または `async`、可能なら body 末尾に |
+| サードパーティスクリプト（広告・分析）を同期的に読み込む | メインスレッドを長時間ブロックして INP / LCP が悪化 | `async` + `Partytown` / Facade パターンで Web Worker に逃がす |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]] / [[_anti-patterns/レイヤー別/Layer5|Layer 5 パフォーマンス アンチパターン集]]
 
 ## 具体例
 
@@ -334,6 +418,86 @@ graph TD
 - [web-vitals (npm)](https://github.com/GoogleChrome/web-vitals) --- フィールドデータ収集ライブラリ
 - [Chrome UX Report (CrUX)](https://developer.chrome.com/docs/crux/) --- 実ユーザーデータセットの公式ドキュメント
 - [web.dev - Optimize LCP](https://web.dev/articles/optimize-lcp) / [Optimize INP](https://web.dev/articles/optimize-inp) / [Optimize CLS](https://web.dev/articles/optimize-cls) --- 指標ごとの具体的な最適化手法
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. **LCP / INP / CLS の3指標がそれぞれ「何の問題」を測っているかを30秒で説明せよ。** 1つの最適化で全部解決しない理由を、それぞれが見ているレイヤー（ネットワーク・JS・レイアウト）の違いに触れて答えること。
+2. **Yes/No: 「Lighthouse でスコア95点を取れたので、Core Web Vitals は対策完了」と判断してよいか?** ラボデータとフィールドデータ（CrUX）の違い、Google が検索ランキングシグナルに使うのはどちらかを答えよ。
+3. **AI生成コードレビュー設問:** AI が「LCP を改善するため」として以下のコードを生成した。本文の観点で **問題点を最低3つ** 指摘せよ。
+
+```jsx
+function ProductPage({ product, reviews }) {
+  // ヒーロー画像（LCP候補）
+  return (
+    <article>
+      <img
+        src={product.heroImage}
+        loading="lazy"
+        fetchpriority="high"
+        decoding="async"
+      />
+      <h1>{product.name}</h1>
+
+      {/* レビュー一覧（API取得後に表示） */}
+      <ReviewList reviews={reviews} />
+
+      {/* 関連商品（下部に挿入される広告枠） */}
+      <div id="ad-slot" />
+    </article>
+  );
+}
+
+function ReviewList({ reviews }) {
+  if (!reviews) return null;  // ローディング中は何も表示しない
+  return (
+    <ul>
+      {reviews.map(r => (
+        <li key={r.id}>
+          <img src={r.avatarUrl} />
+          <p>{r.content}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 広告スクリプトを <head> に同期読み込み
+// <script src="https://ads.example.com/sdk.js"></script>
+```
+
+> [!note]- 解答の指針
+>
+> > [!info] 用語ミニ辞典
+> > - **LCP (Largest Contentful Paint):** ビューポート内で最も大きいコンテンツ要素（画像・テキストブロック）が描画されるまでの時間。「メインコンテンツがいつ見えるか」を測る。良好は 2.5 秒以下
+> > - **INP (Interaction to Next Paint):** ユーザー操作（クリック・タップ・キー入力）から次の画面更新までの時間のうち、ページのライフタイムで最も遅いもの（外れ値除く）。旧 FID は最初の操作のみ測っていた問題を解決。良好は 200ms 以下
+> > - **CLS (Cumulative Layout Shift):** ページ表示中に要素が予期せず移動する量の累積スコア。良好は 0.1 以下。`Impact Fraction × Distance Fraction` で計算
+> > - **CrUX (Chrome User Experience Report):** 実ユーザーの Chrome から匿名で集約されたフィールドデータセット。Google が検索ランキングに使うのはこれ。PageSpeed Insights / Search Console から閲覧可能
+> > - **ラボデータ vs フィールドデータ:** ラボはシミュレーション環境（Lighthouse / DevTools）の計測、フィールドは実ユーザーの計測。デバイス・回線・地域が多様なフィールドの方が乖離しやすい
+> > - **`fetchpriority`:** ブラウザにリソース取得の優先度を指示する HTML 属性（`high` / `low` / `auto`）。LCP 候補画像に `high` を付けると最優先取得される
+> > - **`loading="lazy"`:** ビューポートに近づくまで `<img>` の取得を遅延させる属性。ファーストビュー外の画像にだけ使うのが原則
+> > - **Critical CSS:** ファーストビューに必要な最小限の CSS。`<style>` で HTML にインライン化することでレンダーブロッキングを排除し LCP を改善する
+> > - **`font-display: swap`:** Web フォント読み込み中もシステムフォントでテキストを即座に表示する設定。FOIT（テキスト不可視）回避と引き換えに FOUT（フォント切替時の見た目変化）が発生
+> > - **Long Task:** メインスレッドを 50ms 以上ブロックするタスク。`PerformanceObserver` で `type: 'longtask'` を観測できる。INP 悪化の主因
+> > - **Web Worker / `requestIdleCallback`:** 重い処理をメインスレッド外（Worker）または手の空いた時間（Idle）に逃がす仕組み。ただし制御フローが複雑化するため、計測でボトルネックを確認してから適用する
+> > - **CSP (Content Security Policy):** XSS 防御の HTTP ヘッダー。`unsafe-inline` を使わず `nonce` / `hash` でインラインスクリプト/スタイルを許可するのが推奨
+>
+> 1. **3指標は別レイヤーの問題を見ている**ので、解決策も別の場所に効く:
+>     - **LCP は主にバックエンド + ネットワーク + リソース読み込み**の問題。TTFB 短縮（CDN、サーバーサイドキャッシュ）、レンダーブロッキング除去（Critical CSS、JS の `defer`）、リソース最適化（WebP/AVIF、`fetchpriority`）が効く
+>     - **INP は主に JavaScript の重さ**の問題。Long Task 分割、不要な再レンダリング削減（`React.memo` / `useMemo`、ただし計測してから）、重い処理を Web Worker / `requestIdleCallback` に逃がすのが効く
+>     - **CLS は主にレイアウト設計**の問題。`width`/`height` 指定、`aspect-ratio`、スケルトン UI、`font-display: swap`、動的挿入要素のプレースホルダー確保が効く。
+>     - 例えば「画像を WebP に変えた」だけでは LCP は改善しても INP・CLS は変わらない。「`React.memo` を全部に付けた」だけでは INP は改善しても LCP・CLS は変わらない。**まず web-vitals でどの指標が悪いか**を見て、対応する打ち手を選ぶ
+> 2. **No、判断してはいけない**。Lighthouse は **ラボデータ**（シミュレーション）であり、固定の回線・デバイス条件での1点計測。実ユーザーは多様なデバイス・回線・地域を持ち、結果は乖離する。**Google が検索ランキングシグナルに使うのは CrUX のフィールドデータ**（実ユーザーの Chrome から匿名収集）。ラボで 95点でも、低スペックモバイルが多い実ユーザー層ではフィールドデータが poor になりうる。**`web-vitals` ライブラリで本番計測 → 自社分析基盤か PageSpeed Insights で CrUX を確認**して初めて対策完了と判断できる。逆に Lighthouse が低くてもフィールドが good なら緊急性は低い。**ラボは開発時の指標、フィールドは本番の指標**と使い分ける
+> 3. AI生成コードの問題点（最低限以下を指摘できれば本文を理解している）:
+>     - **LCP 候補のヒーロー画像に `loading="lazy"` + `fetchpriority="high"` 併用** — `lazy` が優先されるため `fetchpriority="high"` の効果が打ち消され、LCP がむしろ悪化する。LCP 候補は `eager`（属性削除でデフォルト）+ `fetchpriority="high"` + `<link rel="preload" as="image" fetchpriority="high">` が正しい
+>     - **ヒーロー画像の `width` / `height` 未指定** — アスペクト比が画像読み込みまで確定せず、CLS が発生する。`width="1200" height="600"` または `aspect-ratio: 2 / 1` を必ず指定する。`alt` 属性も欠落（アクセシビリティ違反）
+>     - **`ReviewList` のローディング中 `null` 返し → CLS 発生** — `if (!reviews) return null` で何も描画しない状態から、API レスポンス到着時に一気にリスト挿入されるため、`<h1>` 以下のコンテンツが下に押し下げられて CLS スコアが悪化する。`min-height` 確保の skeleton か、固定高さのプレースホルダーを表示する
+>     - **`<div id="ad-slot" />` の動的広告挿入** — 広告 SDK が後から DOM に挿入する場合、上下のコンテンツがずれて CLS 発生。広告枠には `min-height` を CSS で予約しておき、未配信時もレイアウトが動かないようにする
+>     - **レビューリスト内 `<img>` の `width` / `height` / `loading` / `alt` 未指定** — 各レビューのアバター画像も CLS 要因。`width="32" height="32" loading="lazy" alt={r.author}` を付ける（ファーストビュー外なので `lazy` は OK）
+>     - **広告 SDK を `<head>` に同期 `<script>` 読み込み** — メインスレッドを長時間ブロックして INP / LCP が悪化。`async` または `defer` を付け、可能なら **Partytown / Facade パターン** で Web Worker に逃がす。同期サードパーティスクリプトは Core Web Vitals 悪化の最頻出原因
+>     - **`<head>` に同期 `<script>` 配置（コメント部分）** — レンダーブロッキングそのもの。広告 SDK は Lazy 読み込みかインタラクション後の遅延読み込みに変える
+>     - **計測未実装** — そもそもこのコードに `web-vitals` の計装がないため、フィールドでの効果が確認できない。`onLCP(sendToAnalytics)` `onINP(sendToAnalytics)` `onCLS(sendToAnalytics)` の追加を促す
 
 ## 学習メモ
 

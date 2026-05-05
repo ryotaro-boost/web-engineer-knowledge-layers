@@ -319,7 +319,7 @@ useEffect(() => {
 }, []);
 ```
 
-これが「**Stale Closure**（古いクロージャ）」と呼ばれる、フック特有の悪名高いバグ。詳細は[[JSのクロージャとReactのStale Closure問題]]を参照。
+これが「**Stale Closure**（古いクロージャ）」と呼ばれる、フック特有の悪名高いバグ。基本的な回避策は (a) 依存配列に `count` を含める、(b) `setCount(c => c + 1)` のように関数型更新を使う（常に最新値を受け取れる）、(c) `useRef` で最新値を保持して読み出す、のいずれか。さらに公式解決策として後述の `useEffectEvent`（React 19.2）を使う方法もある。
 
 **公式解決策: `useEffectEvent`（React 19.2、2025年10月Stable）** — Effect から呼び出す関数を「常に最新のpropsとstateを参照するイベントハンドラ」として宣言できる。Effect自体は再実行せず、内部から呼ぶイベントだけが最新値を見るため、依存配列の罠と再subscribe問題を同時に解決する:
 
@@ -661,7 +661,7 @@ function SearchResults({ query }) {
 </Suspense>
 ```
 
-これにより、**入力の即時反応**と**重い処理の表示**を両立できる。詳細は[[ReactのConcurrent FeaturesとSuspense]]を参照。
+これにより、**入力の即時反応**と**重い処理の表示**を両立できる。Concurrent Features の中核は「レンダリングを中断・再開・破棄できる」スケジューラで、`startTransition` / `useDeferredValue` / `useTransition` がそのアプリ側 API。Suspense はデータ取得や lazy import の待ち時間を宣言的に表現するための仕組みで、Concurrent Mode と組み合わせて「待っている間は前の UI を維持しつつ重い処理を進める」UX を実現する。
 
 ### React 19（2024年12月Stable） — `use()` フックとActions
 
@@ -778,7 +778,7 @@ export function LikeButton({ initialLikes }) {
 }
 ```
 
-RSCの本質: **「サーバーで動くべきコード」と「クライアントで動くべきコード」を境界で分離する**。バンドルサイズの削減・SEO・データ取得のシンプル化を狙う。詳細は[[ReactServerComponentsとNext.js]]を参照。
+RSCの本質: **「サーバーで動くべきコード」と「クライアントで動くべきコード」を境界で分離する**。バンドルサイズの削減・SEO・データ取得のシンプル化を狙う。Server Components はクライアント JS にバンドルされず、データ取得を直接書ける（`async` コンポーネント）。一方 `'use client'` ディレクティブで明示された Client Components のみが従来通りインタラクティブ（フック・イベントハンドラ・ブラウザ API）を使える。実装基盤は Next.js 13+ App Router / Remix / Waku などのフレームワーク。
 
 ## 他フレームワークとの設計比較
 

@@ -3,11 +3,27 @@ layer: 2
 topic: HTTP/HTTPS
 status: 🔴 未着手
 created: 2026-03-28
+prerequisites: ["[[TCP-IP]]", "[[DNS]]"]
+next_steps: ["[[TLS-SSL]]", "[[WebSocket]]", "[[Layer4-アプリケーション/_index|Layer 4: アプリケーション]]"]
+difficulty: intermediate
+estimated_minutes: 40
+ai_collaboration: heavy
 ---
 
 # HTTP/HTTPS
 
 > **一言で言うと:** HTTP（HyperText Transfer Protocol）はWebにおけるクライアントとサーバー間の「共通言語」であり、HTTPS はその通信をTLSで暗号化した安全な版。ステートレス性・メソッドの意味論・キャッシュ制御がWebアーキテクチャ全体の設計を規定している。
+
+## 3分で全体像
+
+- **何を解決する技術か:** Web 上のクライアント・サーバー間で「リソースを取得・操作する」共通ルール（メソッドの意味、ステータスコード、キャッシュ制御、認証）を提供し、ブラウザ・モバイル・API・CDN・LB が相互に連携できる前提を作る
+- **代表的な使用シーン:** Web ブラウジング、REST/GraphQL API、CDN 配信、Webhook、OAuth 認証、ヘルスチェック、メトリクスエンドポイント、画像/動画配信
+- **これだけは覚える3つ:**
+    1. **メソッドの意味（safety / idempotency）が設計の出発点** — GET は安全、PUT/DELETE はべき等。これを破ると CDN・ブラウザのプリフェッチ・リトライがすべて壊れる
+    2. **適切なステータスコードを使う** — 全部 200 で返してボディに `{"error": true}` は典型的なアンチパターン。HTTP クライアント・ミドルウェア・モニタリングが機能しなくなる
+    3. **`Cache-Control` を必ず明示する** — デフォルト動作はブラウザ・CDN ごとにバラバラ。`no-cache` は「キャッシュしない」ではなく「使う前に検証する」、`no-store` が「キャッシュ禁止」
+- **AIに任せやすいか:** **任せやすい** — REST API のスケルトン、ステータスコードの選択、`Cache-Control` ヘッダのテンプレ、curl コマンドのデバッグは AI が高品質に書ける。`/review-ai-code` でメソッドの誤用や全 200 アンチパターン、CORS の `*` 過剰許可も検出可能。一方「キャッシュ TTL の値選定」「セキュリティヘッダの段階導入」「HTTP/2 → HTTP/3 移行のタイミング」は運用・コスト・ブラウザサポートを踏まえて人間が判断
+- **詰まったらここを読む:** [[TCP-IP]] / [[TLS-SSL]] / [[DNS]]
 
 ## なぜ必要か
 
@@ -327,16 +343,78 @@ HTTP/2の多重化は多数の小さなリクエスト（画像、CSS、JS）の
    - 必要なオリジンだけ明示的に許可する
 ```
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェントと協働するための観点。「AIに何をどこまで任せ、人間は何を判断するか」を整理する。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| すべてのAPIエンドポイントをPOSTで実装する | GETのキャッシュ可能性やべき等性の恩恵を失う。RESTful設計の意味論が壊れる | リソースの取得はGET、作成はPOST、更新はPUT/PATCH、削除はDELETEを使う |
-| エラーレスポンスを200で返しボディに`{"error": true}`を入れる | HTTPクライアントのエラーハンドリング、ミドルウェア、モニタリングツールがすべて機能しなくなる | 適切なHTTPステータスコードを使い、ボディにエラーの詳細を含める |
-| `Cache-Control`ヘッダを設定しない | ブラウザやCDNのデフォルトキャッシュ動作に依存し、予測不能な結果になる | すべてのレスポンスに明示的な`Cache-Control`を設定する |
-| CORSの問題を`Access-Control-Allow-Origin: *`で解決する | 認証付きAPIでは`credentials: include`と`*`は共存できない。セキュリティリスクも高い | 許可するオリジンを明示的に列挙する |
-| HTTPSを開発環境で使わない | 本番との挙動の差異（SecureCookie、HSTS、Mixed Content）が見逃される | mkcert等でローカル証明書を発行し、開発環境もHTTPS化する |
-| User-Agentだけでボット判定を行う | UA文字列は自己申告で偽装が容易。スクレイパーはブラウザのUAを名乗るため検出できない | [[UA偽装とボット検出|TLSフィンガープリント・ヘッダ順序・行動分析]]など多層的な検出を組み合わせる |
+| REST API ハンドラのスケルトン（ルーティング・バリデーション・ステータスコード分岐） | リソース定義（リソース名 + 操作）を渡して任せる | リソース設計（粒度、ネスト、URL 形式）の最終確定 |
+| ステータスコード選定（201 vs 200、422 vs 400 vs 404） | 仕様を渡して任せる | API 全体での一貫性、既存エンドポイントとの整合性 |
+| `Cache-Control` ヘッダの設計（max-age, public/private, immutable） | コンテンツ種別（静的/API/機密）を渡して任せる | TTL の値選定（事業のリリース頻度・データ更新頻度との整合） |
+| CORS 設定（`Access-Control-Allow-Origin` 列挙、preflight 対応） | 許可するオリジン一覧を渡して任せる | オリジン一覧の最終確認、`credentials` モードの可否 |
+| **メソッド誤用・全 200 アンチパターンのレビュー** | `/review-ai-code` でレビューさせる | 指摘の妥当性判断、既存 API との互換性影響 |
+| HTTP クライアントのリトライ・タイムアウト設定 | エンドポイントの SLA を渡して任せる | リトライ可否（操作のべき等性）、上限値 |
+| セキュリティヘッダ（HSTS, CSP, X-Frame-Options 等）テンプレ | アプリの構成を渡して任せる | CSP の段階導入計画（Report-Only → 強制） |
+| HTTP/2 vs HTTP/3 の選定 | アクセス特性（モバイル比率、地理的分散）を渡して比較してもらう | インフラの対応状況、CDN の HTTP/3 サポート、運用ツールの対応 |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **メソッドとステータスコードがセマンティクスに沿っているか:** リソース取得が GET になっているか / 作成は 201 + Location ヘッダか / 削除成功は 204 か / 認証ありなら 401、権限なしなら 403 か（混同しやすい）
+2. **`Cache-Control` が明示されているか:** 静的アセットは `public, max-age=31536000, immutable`、API は `private, max-age=N`、機密は `no-store`。全エンドポイントに明示があるか
+3. **CORS が `Access-Control-Allow-Origin: *` で済まされていないか:** 特に認証付き API（`credentials: include`）と `*` は共存不可（仕様レベルで禁止されている）。許可オリジンを列挙しているか
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提
+- フレームワーク: Express / Fastify / FastAPI / Gin / Spring Boot など
+- API スタイル: REST / GraphQL / RPC
+- 認証方式: Cookie セッション / JWT / OAuth
+- CDN/CORS: 利用する CDN、許可するオリジン一覧
+- HTTP バージョン: HTTP/1.1 / HTTP/2 / HTTP/3
+- 既存 API との一貫性（既にあるエンドポイントの命名・ステータスコード方針）
+
+# やってほしいこと
+- 〜のリソース用 REST API ハンドラ / クライアント / Cache-Control 設定を実装
+
+# 守ってほしい制約（このトピック固有）
+- メソッドはセマンティクスに沿う（取得=GET, 作成=POST→201, 更新=PUT/PATCH, 削除=DELETE→204）
+- 4xx/5xx を適切に使い分ける（401/403/404/422/429/500/502/503/504）
+- Cache-Control は全レスポンスに明示。静的=long max-age + immutable、API=private + 短い max-age、機密=no-store
+- CORS は許可オリジンを列挙（* 禁止、特に credentials を使う場合）
+- HSTS / X-Content-Type-Options / X-Frame-Options のセキュリティヘッダを設定
+- 入力バリデーションは 400/422 で詳細を返す（Problem Details for HTTP APIs / RFC 7807 形式推奨）
+
+# 完了の判断基準
+- curl で各エンドポイントを叩いてステータスコードとヘッダが意図通り
+- ブラウザ DevTools で Cache-Control が効いていることを確認
+- ロードテストで p99 レイテンシが SLA 内
+- セキュリティヘッダのスキャン（securityheaders.com 等）で A 以上
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| **すべてのエンドポイントを POST で実装** | GET のキャッシュ可能性・べき等性の恩恵を失う。CDN がリソースをキャッシュできず、ブラウザのプリフェッチも効かない。RESTful 設計の意味論が壊れる | リソース取得は GET、作成は POST、置換は PUT、部分更新は PATCH、削除は DELETE |
+| **エラーを 200 で返しボディに `{"error": true}`** | HTTPクライアント（`response.ok` 判定）、ミドルウェア（リトライ、サーキットブレーカー）、モニタリング（5xx 率アラート）がすべて機能しなくなる | 4xx/5xx を使い分け、ボディは Problem Details (RFC 7807) 形式で詳細を返す |
+| **`Cache-Control` 未設定でブラウザ任せ** | ブラウザ・CDN・プロキシのデフォルト動作はバラバラ。同じレスポンスが片方ではキャッシュされ片方でされない、再現性のない不具合の温床 | すべてのレスポンスに明示的に設定。静的=long + immutable、API=private + 短い max-age、機密=no-store |
+| **`no-cache` で「キャッシュしない」のつもり** | `no-cache` は「キャッシュ保存はする、ただし使用前に必ず再検証する」の意味。「保存自体禁止」は `no-store` | 機密データには `no-store` を使う。区別を意識する |
+| **CORS を `Access-Control-Allow-Origin: *` で雑に解決** | 認証付き API（`credentials: include` / Cookie 送信）と `*` は仕様上共存不可。`*` の場合、ブラウザが credentials を送らない | 許可するオリジンを列挙。動的判定する場合も allow list 方式に |
+| **301 と 302 を混同して使う** | 301 はブラウザがキャッシュする恒久的リダイレクト。誤って一時的な切り替え（A/B テスト、メンテナンス）に使うと、戻したくても戻せなくなる（ユーザーのブラウザに 301 が残る） | 一時的=302 / 307 / 308、恒久的=301。SEO 的に正しい場合のみ 301 |
+| **HTTPS を開発環境で使わない** | 本番との挙動の差異（Secure Cookie、HSTS、Mixed Content、SameSite=None requires Secure）が見逃され、本番で初めて壊れる | mkcert でローカル CA を作り、開発環境も HTTPS 化 |
+| **User-Agent だけでボット判定** | UA は自己申告で偽装が容易。スクレイパーはブラウザの UA を名乗る | [[UA偽装とボット検出|TLSフィンガープリント・ヘッダ順序・行動分析]]を組み合わせる |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -492,6 +570,150 @@ Chrome DevTools → Network タブ で確認できる情報:
 - **RFC 9111**: HTTP Caching — https://datatracker.ietf.org/doc/html/rfc9111
 - **Web**: MDN Web Docs: HTTP — https://developer.mozilla.org/ja/docs/Web/HTTP
 - **Web**: High Performance Browser Networking（Ilya Grigorik） — HTTP/2, QUIC, パフォーマンス最適化の解説
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. GET と POST の本質的な違いを「URLにパラメータが見えるかどうか」以外の観点で30秒で説明できるか（safety と idempotency に触れること）
+2. 401 と 403 の使い分けを実例とともに示せ。混同するとどんな問題が起きるか
+3. 次のAI生成 Express コードはこのトピックの観点で何が問題か。修正方針を述べよ:
+
+```javascript
+import express from 'express';
+const app = express();
+app.use(express.json());
+
+// CORS設定
+app.use((req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
+// ユーザーを取得
+app.post('/api/getUser', async (req, res) => {
+  const user = await findUser(req.body.id);
+  if (!user) {
+    return res.json({ success: false, error: 'not found' });
+  }
+  res.json({ success: true, data: user });
+});
+
+// ユーザーを削除
+app.get('/api/deleteUser', async (req, res) => {
+  await deleteUser(req.query.id);
+  res.json({ success: true });
+});
+
+app.listen(3000);
+```
+
+> [!info] 用語ミニ辞典（解答を読む前に）
+> - **Safety（安全）** — リソースの状態を変更しないこと。GET / HEAD / OPTIONS は safe。安全なメソッドはブラウザが prefetch やリンクの先読みに自由に使える
+> - **Idempotency（べき等性）** — 同じリクエストを何度送っても結果が同じになる性質。GET / PUT / DELETE はべき等、POST / PATCH は非べき等。リトライしてよいかの判断基準
+> - **Problem Details（RFC 7807）** — HTTP API のエラーレスポンス形式の標準。`type`, `title`, `status`, `detail`, `instance` を含む JSON 構造。`Content-Type: application/problem+json`
+> - **Preflight リクエスト** — クロスオリジンの非単純リクエスト（カスタムヘッダや PUT/DELETE 等）の前にブラウザが送る OPTIONS リクエスト。サーバーが許可していれば本リクエストが送られる
+> - **Mixed Content** — HTTPS ページから HTTP リソース（画像、スクリプト、CSS）を読み込むこと。ブラウザがブロックする
+> - **`credentials: include`** — Fetch API のオプション。クロスオリジン時に Cookie を送信する。`Allow-Origin: *` とは併用不可
+
+> [!note]- 解答の指針
+> **問1: GET と POST の本質的違い**
+>
+> URL にパラメータが見えるかは表面的な現象で、本質はセマンティクス。
+>
+> - **GET は safe** — リソースの状態を変更しない。同じ URL を何度叩いても結果は変わらない（時間経過によるデータ変化を除く）。だからブラウザがリンクの先読みやプリフェッチを自由にできる、CDN がキャッシュできる、検索エンジンがクロールできる
+> - **GET は idempotent** — 何度送っても同じ。タイムアウト時にリトライしても安全
+> - **POST は safe でも idempotent でもない** — 副作用がある。同じ POST を2回送ると、2回処理される（注文が2件作られる、課金が2回走る等）
+>
+> 結果として:
+>
+> - `GET /api/deleteUser?id=5` のような設計は危険。ブラウザのプリフェッチや検索エンジンクローラーが「先読み」した瞬間にユーザーが削除される。実際にこれで全データが消えた事故がある
+> - キャッシュ可能性も違う。CDN は GET をキャッシュするが POST はキャッシュしない（一部例外あり）
+>
+> **問2: 401 と 403 の使い分け**
+>
+> - **401 Unauthorized** — 「**認証されていない**」。ログインしていない、トークン未提示、トークン期限切れ。`WWW-Authenticate` ヘッダで「どう認証すればよいか」を返す。クライアントは「ログインさせる」のが対応
+> - **403 Forbidden** — 「**認証はされたが権限がない**」。ログイン済みだが、そのリソースにアクセスする権利がない。一般ユーザーが管理者ページにアクセスした、有料プラン限定機能を無料ユーザーが叩いた等
+>
+> **混同するとどうなるか:**
+>
+> - 認証切れに対して 403 を返すと、クライアントは「再ログインすれば解決」と判断できず、ユーザーに「権限がない」と表示する。実際は単にトークン期限切れ
+> - 権限不足に 401 を返すと、クライアントが再ログインフローを起動し、ユーザーが何度ログインしてもアクセスできない無限ループに
+>
+> 設計時のフロー: 「未認証 / トークン無効」→ 401、「認証済みだが権限なし」→ 403、「リソース自体が存在しない」→ 404（権限の漏れを防ぐため、権限がないリソースの存在を漏らさないために 404 を返す設計もある）
+>
+> **問3: AI生成 Express コードの問題点**
+>
+> このコードは典型的な AI による「動くが意味論が壊れた」例。問題は4つ。
+>
+> **(a) 全エンドポイントが POST または GET で書かれているが、メソッドが意味と合っていない**
+>
+> - `POST /api/getUser` はリソース取得なので GET であるべき。POST にしているせいでキャッシュ不可、URL がリソースを表していない
+> - `GET /api/deleteUser` は破壊的操作なので絶対に GET にしてはいけない。ブラウザのプリフェッチで意図せず削除されうる
+>
+> **(b) エラーを 200 で返している**
+>
+> `not found` のときに `200 + { success: false }` を返している。`response.ok`（200番台で true）でエラーが拾えず、HTTP クライアント・モニタリング・CDN がすべて誤動作する。
+>
+> **(c) `Access-Control-Allow-Origin: *` と `Access-Control-Allow-Credentials: true` の併用**
+>
+> これは仕様（CORS）違反で、ブラウザが拒否する。`*` は credentials なしの場合のみ使える。実際には Cookie が送信されず、認証が通らない。
+>
+> **(d) Preflight 対応がない / セキュリティヘッダがない**
+>
+> OPTIONS リクエストに対するハンドリングがない。`Access-Control-Allow-Methods`, `Access-Control-Allow-Headers` も未設定。HSTS、CSP、X-Content-Type-Options 等のセキュリティヘッダもない。
+>
+> **修正版（最小構成）:**
+>
+> 以下では `cors` ミドルウェア（Express 公式の [`cors` パッケージ](https://www.npmjs.com/package/cors)。許可オリジン・preflight・許可メソッドを宣言的に書ける）を使う。手書きでヘッダを設定するより安全で、preflight (OPTIONS) の自動応答も任せられる。
+>
+> ```javascript
+> import express from 'express';
+> import cors from 'cors';
+> const app = express();
+> app.use(express.json());
+>
+> // CORS: オリジンを列挙、credentials は明示
+> app.use(cors({
+>   origin: ['https://app.example.com', 'https://admin.example.com'],
+>   credentials: true, // * とは併用しない
+> }));
+>
+> // セキュリティヘッダ
+> app.use((req, res, next) => {
+>   res.set({
+>     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+>     'X-Content-Type-Options': 'nosniff',
+>     'X-Frame-Options': 'DENY',
+>   });
+>   next();
+> });
+>
+> // GET: リソース取得 → 200 / 404
+> app.get('/api/users/:id', async (req, res) => {
+>   const user = await findUser(req.params.id);
+>   if (!user) {
+>     return res.status(404).json({
+>       type: 'about:blank',
+>       title: 'User not found',
+>       status: 404,
+>     });
+>   }
+>   res.set('Cache-Control', 'private, max-age=60');
+>   res.json(user);
+> });
+>
+> // DELETE: リソース削除 → 204
+> app.delete('/api/users/:id', async (req, res) => {
+>   await deleteUser(req.params.id);
+>   res.status(204).end();
+> });
+>
+> app.listen(3000);
+> ```
+>
+> 「メソッドの意味」「ステータスコードの正しさ」「CORS の正しい設定」「セキュリティヘッダ」がこのトピックの最低ライン。
 
 ## 学習メモ
 

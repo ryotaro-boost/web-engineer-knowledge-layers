@@ -3,11 +3,27 @@ layer: 2
 topic: DNS
 status: 🔴 未着手
 created: 2026-03-28
+prerequisites: ["[[TCP-IP]]"]
+next_steps: ["[[HTTP-HTTPS]]", "[[TLS-SSL]]", "[[CDN]]"]
+difficulty: intermediate
+estimated_minutes: 30
+ai_collaboration: partial
 ---
 
 # DNS
 
 > **一言で言うと:** ドメイン名（人間が読める名前）をIPアドレス（マシンが使うアドレス）に変換する分散データベースシステムであり、インターネットの「電話帳」。
+
+## 3分で全体像
+
+- **何を解決する技術か:** 「IPアドレスは変わるが、利用者から見た名前は変えたくない」という間接層（Indirection Layer）の問題を、分散・階層的なキャッシュ可能なシステムで解決する
+- **代表的な使用シーン:** すべての Web アクセスの先行ステップ、メール配送先（MX）、SSL証明書のドメイン検証、サービスディスカバリ（Kubernetes 内部 DNS）、フェイルオーバー（ヘルスチェック連動）
+- **これだけは覚える3つ:**
+    1. **TTL がキャッシュの寿命** — 「DNS 変更が即座に反映されない」のはこのため。本番のドメイン移行前は TTL を短く（300秒等）下げて旧 TTL の経過を待つのが鉄則
+    2. **DNS は単なる名前解決ではない** — メール認証（SPF/DKIM/DMARC）、ドメイン所有権検証、CAA による証明書発行制限、SRV によるサービスディスカバリの基盤でもある
+    3. **アプリ側で IP をハードコード/長期キャッシュしない** — フェイルオーバーや IP 変更に追従できなくなる。ドメイン名で参照し、TTL を尊重する
+- **AIに任せやすいか:** **任せやすい** — `dig` / `nslookup` コマンドの組み立て、Terraform/Route53 のレコード定義、SPF/DKIM の TXT レコード作成は AI が高品質に書ける。一方「TTL の値選定」「ゾーン頂点の CNAME 制約への対応」「マルチクラウド時のフェイルオーバー設計」は運用方針と SLA 次第で人間が判断
+- **詰まったらここを読む:** [[TCP-IP]] / [[HTTP-HTTPS]] / [[TLS-SSL]]
 
 ## なぜ必要か
 
@@ -200,14 +216,75 @@ DNSは名前解決以外にも多くの用途がある:
    - 鍵の有効期限切れでドメイン全体が名前解決不能に
 ```
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェントと協働するための観点。「AIに何をどこまで任せ、人間は何を判断するか」を整理する。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| アプリケーション内でDNS結果をハードコードする | IPアドレスの変更に追従できず、フェイルオーバーが効かない | ドメイン名を使い、DNS解決をOS/ランタイムに任せる |
-| DNSルックアップ結果を無期限にキャッシュする | サーバーのIP変更やフェイルオーバーに追従できない | TTLを尊重するか、接続プールのrefresh間隔を設定する |
-| CNAMEチェーンを深くネストする | 各段階でDNS問い合わせが発生し、解決時間が線形に増加 | CNAMEは1段、多くても2段に抑える |
-| 外部サービス依存のDNS設定をコードで直接操作する | DNS設定ミスでサービス全体がダウンするリスク | Terraform/IaCでDNS設定を管理し、レビュープロセスを通す |
+| Terraform / Route53 / Cloud DNS の DNS レコード定義 | 仕様（A/CNAME/MX/TXT のリスト + TTL）を渡して任せる | TTL の値・alias 先・evaluate_target_health の有無 |
+| SPF / DKIM / DMARC の TXT レコード組み立て | 利用するメール配信元（SES, SendGrid 等）を渡して任せる | DMARC ポリシーの強さ（none → quarantine → reject）の段階移行判断 |
+| `dig` / `nslookup` コマンドの組み立て | 調査目的（A レコード確認、TTL 確認、トレース）を渡して任せる | 結果の解釈（伝播状況・キャッシュサーバーごとの差異） |
+| **CNAME チェーン・TTL レビュー** | `/review-ai-code` でレビューさせる | 指摘の妥当性判断 |
+| ドメイン移行手順書のドラフト | 「現状 / 目標 / 旧 TTL」を渡して任せる | 移行ウィンドウの設定、ロールバック条件、関係者連絡 |
+| ヘルスチェック連動フェイルオーバー設計 | 候補（DNS切替 / Anycast / L7 LB）をAIに比較させる | RTO/RPO の要件、コスト、運用体制を踏まえて選定 |
+| アプリ側 DNS キャッシュ設定（Java の `networkaddress.cache.ttl` 等） | デフォルト値の問題点を AI に指摘させる | 本番のフェイルオーバー要件と整合させて確定 |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **TTL の値が明示されているか:** デフォルトに頼らず、サービスの特性（安定 = 3600+ / 変更可能性あり = 300-600 / フェイルオーバー = 60）で意図的に設定されているか
+2. **ゾーン頂点に CNAME を設定していないか:** `example.com` に CNAME は設定不可（RFC 1034 違反）。alias レコード（Route 53）や ANAME（Cloudflare）で代替されているか
+3. **アプリ層で IP をハードコード / 長期キャッシュしていないか:** `getaddrinfo` の結果を無期限保持していないか、HTTPクライアントが TTL を尊重して再解決するか
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提
+- ドメイン: example.com（既に取得済み）
+- 用途: Web (api.example.com) / メール (mail.example.com) / CDN (cdn.example.com)
+- DNS プロバイダ: Route 53 / Cloud DNS / Cloudflare
+- IaC: Terraform / Pulumi
+- メール配信元: SES / SendGrid / Mailgun（SPF/DKIM/DMARC が必要）
+- 想定アクセス頻度・フェイルオーバー要件
+
+# やってほしいこと
+- 〜の DNS レコードを Terraform で定義 / SPF, DKIM, DMARC を設定 / 移行手順を作成
+
+# 守ってほしい制約（このトピック固有）
+- ゾーン頂点には CNAME を設定しない（alias レコードを使う）
+- TTL は用途別に明示（安定 3600 / 変更前 300）
+- CAA レコードで許可 CA を制限（Let's Encrypt のみ等）
+- ヘルスチェック連動が必要なレコードは alias + evaluate_target_health で
+- DNS 設定変更は Terraform 経由で PR レビューを通す
+
+# 完了の判断基準
+- `dig +trace` で意図通りに解決される
+- TTL が想定通り
+- DNSSEC が有効（必要なら）
+- メール送信時に SPF/DKIM/DMARC が pass する
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| **アプリ内で DNS 結果をハードコード** | サーバーの IP 変更やフェイルオーバーに追従できず、変更時にデプロイが必要になる | ドメイン名を使い、DNS 解決を OS / HTTP クライアントに任せる |
+| **DNS ルックアップ結果を無期限キャッシュ** | サーバーの IP 変更やヘルスチェック連動フェイルオーバーが効かなくなる。Java は標準で `networkaddress.cache.ttl=-1`（無期限）なので特に注意 | TTL を尊重する。または接続プールに refresh 間隔を設定 |
+| **CNAME チェーンを深くネスト** | 各段階で DNS 問い合わせが発生し、解決時間が線形に増加。CNAME → CNAME → A の3段で 3 RTT 浪費する | CNAME は1段、多くても2段に抑える。`dig +trace` で確認 |
+| **ゾーン頂点（apex）に CNAME を設定** | RFC 1034 違反でゾーン全体が壊れる（同居する SOA/NS と競合） | alias レコード（Route 53）/ ANAME（Cloudflare）等のフラット CNAME 機能を使う |
+| **TTL を 0 に設定して「キャッシュさせない」** | 一部リゾルバは独自に最低 TTL を適用し、ブラウザも独自キャッシュする。完全な無キャッシュは不可能 | 短くしたい場合は 30-60 秒。本来の目的（フェイルオーバー）に対しては alias + ヘルスチェックを併用 |
+| **DNS 設定を AWS Console / GUI で直接操作** | 変更履歴が残らず、レビュープロセスを通せない。ロールバックも困難 | Terraform / IaC で管理し PR レビューを通す。レコード変更は git diff で追える状態にする |
+| **DNSSEC の鍵ローテーション忘れ** | KSK / ZSK の有効期限切れでドメイン全体が名前解決不能になる（過去に有名サイトで実際に起きている） | 自動ローテーションを設定。期限監視を Datadog / CloudWatch に組み込む |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -314,6 +391,128 @@ resource "aws_route53_record" "api" {
 - **RFC 1034/1035**: DNS仕様の原典 — https://datatracker.ietf.org/doc/html/rfc1034
 - **Web**: How DNS works（comic形式の視覚的解説） — https://howdns.works/
 - **Web**: Cloudflare Learning Center: DNS — https://www.cloudflare.com/learning/dns/what-is-dns/
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. 「DNS 変更が即座に反映されない」のはなぜか。本番のドメイン移行で TTL をどう操作すべきか30秒で説明できるか
+2. `Cache-Control: no-cache` が「キャッシュしない」ではないのと同様、DNS の TTL=0 が「キャッシュされない」を意味しない理由を説明せよ
+3. 次のAI生成 Terraform はこのトピックの観点で何が問題か。修正方針を述べよ:
+
+```hcl
+# Web サービス用の DNS 設定
+resource "aws_route53_record" "apex" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "example.com"
+  type    = "CNAME"
+  ttl     = 0
+  records = [aws_lb.main.dns_name]
+}
+
+resource "aws_route53_record" "www" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "www.example.com"
+  type    = "CNAME"
+  ttl     = 0
+  records = ["example.com"]
+}
+```
+
+> [!info] 用語ミニ辞典（解答を読む前に）
+> - **TTL（Time To Live）** — DNS レコードの「賞味期限」。リゾルバや中間キャッシュサーバーが応答を保持する秒数。86400 = 24時間
+> - **ゾーン頂点（Zone Apex）** — ドメインの最上位ノード。`example.com` 自身を指す。`www.example.com` のような子ノードと違って CNAME を設定できない（RFC 1034 違反になる）
+> - **alias レコード** — Route 53 / Cloud DNS の独自機能で、ゾーン頂点でも CNAME 同等の動作（A/AAAA を動的に解決）を実現する。AWS 内部リソース（ELB, CloudFront 等）への参照に使う
+> - **DNS 伝播（Propagation）** — レコード変更が世界中のキャッシュサーバーに行き渡るまでの時間。実体は「旧 TTL の経過待ち」
+> - **再帰クエリ / 反復クエリ** — 再帰：「最終答えをくれ」（クライアント → リゾルバ）。反復：「知っていれば答え、知らなければ次の問い合わせ先を教えろ」（リゾルバ → 各権威サーバー）
+
+> [!note]- 解答の指針
+> **問1: DNS 変更が即座に反映されない理由と対処**
+>
+> DNS の各レコードには TTL（賞味期限）が設定されており、世界中のリゾルバ・キャッシュサーバー・OS のスタブリゾルバが「この TTL の間は再問い合わせせずに保持してよい」と解釈する。これは設計上の機能で、ルートサーバーや権威サーバーへの負荷集中を防いでいる。
+>
+> 結果、レコードを変更しても、世界中のキャッシュが古いレコードを保持している間は古い IP が返り続ける。TTL=86400（24時間）なら最悪24時間古いまま。
+>
+> 本番のドメイン移行では以下の手順で行う:
+>
+> 1. **移行の数日前**: TTL を短く下げる（例: 86400 → 300）
+> 2. **旧 TTL（86400 秒 = 24時間）の経過を待つ** — このタイミングで全世界のキャッシュが「TTL=300」の新レコードを覚える
+> 3. **本番の変更を実施** — 最大 5 分で全世界に伝播する
+> 4. **移行完了後**: TTL を元に戻す（例: 300 → 3600）
+>
+> この手順を踏まないと「移行直後に過去の IP に返って混乱」が発生する。
+>
+> **問2: TTL=0 が「キャッシュされない」を意味しない理由**
+>
+> TTL=0 は仕様上「キャッシュしてはいけない」を表すが、現実のインターネットでは以下の理由で完全に守られない。
+>
+> 「DNS は世界中で毎秒膨大な問い合わせが発生する」前提があり、TTL=0 を全リゾルバが律儀に守ると、人気ドメインへの問い合わせが権威サーバーに集中して **DDoS** になりかねない。そのため各実装は「自衛」として独自に最低キャッシュ時間を入れている:
+>
+> - **一部のリゾルバが独自最低 TTL を適用** — Cloudflare 1.1.1.1 や ISP のキャッシュサーバーが「最低 30 秒は保持」を強制することがある（仕様より自衛優先）
+> - **ブラウザの独自 DNS キャッシュ** — Chrome は OS の DNS と無関係に最大 60 秒キャッシュする（OS のリゾルバを呼ぶオーバーヘッドを避けるため）
+> - **企業プロキシ・ファイアウォール** — 独自にキャッシュする（社内ネットワークの DNS 負荷を抑えるため）
+> - **OS のスタブリゾルバ** — Windows の DNS Client サービスや Linux の nscd / systemd-resolved が独自タイムアウトを持つ
+>
+> つまり「完全にキャッシュしない」は **DNS というシステムが分散・キャッシュ前提で設計されている以上、原理的に不可能**。フェイルオーバーが必要なら TTL=60 程度に下げ、本来は alias + ヘルスチェック連動（DNS のレイヤーではなく LB のレイヤー）で実現するべき。「キャッシュ層を貫通させる」発想ではなく「キャッシュと共存する設計」に切り替える必要がある。
+>
+> **問3: AI生成 Terraform の問題点**
+>
+> このコードは典型的な「DNS をよく知らない AI が書いた」例で、3つの致命的問題がある。
+>
+> **(a) ゾーン頂点に CNAME を設定**
+>
+> `example.com`（ゾーン頂点）に CNAME は RFC 1034 違反。CNAME は「このノードに他の名前で書かれた全てのレコード（SOA、NS、MX 等）の代わり」という意味で、ゾーン頂点には必ず存在する SOA/NS と共存できない。設定は通る場合があるが動作が壊れる。
+>
+> 修正: alias レコードを使う。
+>
+> ```hcl
+> resource "aws_route53_record" "apex" {
+>   zone_id = aws_route53_zone.main.zone_id
+>   name    = "example.com"
+>   type    = "A"  # alias は A/AAAA レコードで指定
+>   alias {
+>     name                   = aws_lb.main.dns_name
+>     zone_id                = aws_lb.main.zone_id
+>     evaluate_target_health = true
+>   }
+> }
+> ```
+>
+> **(b) TTL = 0**
+>
+> 上述の通り「キャッシュなし」は実現できない。下手すると DNS サーバーへの問い合わせが激増して逆効果。サービス特性に応じた値を明示する（安定: 3600 / 変更可能性あり: 300）。
+>
+> **(c) `www` を `example.com` に CNAME チェーン**
+>
+> `example.com` 自身が apex で CNAME 不可なのに、それに対して `www` から CNAME を貼ろうとしている。`www` から直接 LB に alias を貼るか、apex への A レコード（alias）と並列に書く方が良い。
+>
+> **修正版（最小構成）:**
+>
+> ```hcl
+> resource "aws_route53_record" "apex" {
+>   zone_id = aws_route53_zone.main.zone_id
+>   name    = "example.com"
+>   type    = "A"
+>   alias {
+>     name                   = aws_lb.main.dns_name
+>     zone_id                = aws_lb.main.zone_id
+>     evaluate_target_health = true
+>   }
+> }
+>
+> resource "aws_route53_record" "www" {
+>   zone_id = aws_route53_zone.main.zone_id
+>   name    = "www.example.com"
+>   type    = "A"
+>   alias {
+>     name                   = aws_lb.main.dns_name
+>     zone_id                = aws_lb.main.zone_id
+>     evaluate_target_health = true
+>   }
+> }
+> ```
+>
+> alias は AWS 内部の特殊機能で TTL は AWS 側が管理するため、TTL の指定は不要。これがゾーン頂点 CNAME 問題の標準解。
 
 ## 学習メモ
 

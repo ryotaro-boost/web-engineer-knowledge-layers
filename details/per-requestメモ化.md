@@ -277,6 +277,14 @@ func newUserLoader(db *sql.DB) *userLoader {
 }
 
 // Load: per-request 内で同じ id は DB を叩かない
+//
+// ⚠️ 注意: このサンプルは「値」をキャッシュしているため、本記事冒頭で警告した
+// 「同じ id に対する並行 Load の in-flight deduplication が効かない」問題を抱える。
+// 同時に2つのゴルーチンが同じ id を Load すると、両方が cache miss を見て個別に
+// DB クエリを発行する。本番では以下のいずれかを採用する:
+//   (a) golang.org/x/sync/singleflight でクエリ重複を抑止
+//   (b) graph-gophers/dataloader などのバッチング実装を使う（こちらが本筋）
+// 下記は最小メモ化の構造を示すための簡易実装。
 func (l *userLoader) Load(ctx context.Context, id string) (*User, error) {
 	l.mu.Lock()
 	if u, ok := l.cache[id]; ok {
@@ -285,8 +293,6 @@ func (l *userLoader) Load(ctx context.Context, id string) (*User, error) {
 	}
 	l.mu.Unlock()
 
-	// ※ 本番ではバッチング (graph-gophers/dataloader 等) を使う。
-	//   ここでは単純なメモ化のみを示す。
 	row := l.db.QueryRowContext(ctx,
 		"SELECT id, name, email FROM users WHERE id = $1", id)
 	u := &User{}

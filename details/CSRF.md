@@ -48,7 +48,7 @@ Route::post('/transfer', function (Request $request) {
 // LaravelはXSRF-TOKENクッキーを発行し、
 // AxiosがX-XSRF-TOKENヘッダとして自動送信する
 
-// 特定ルートをCSRF検証から除外する場合
+// 特定ルートをCSRF検証から除外する場合 ── Laravel 10 以前のスタイル
 // app/Http/Middleware/VerifyCsrfToken.php
 class VerifyCsrfToken extends Middleware
 {
@@ -56,6 +56,18 @@ class VerifyCsrfToken extends Middleware
         'webhook/*', // 外部Webhookはトークン検証不要
     ];
 }
+```
+
+```php
+// Laravel 11 以降のスタイル ── bootstrap/app.php に集約
+// （Laravel 11 では VerifyCsrfToken の物理ファイルを廃止）
+return Application::configure(basePath: dirname(__DIR__))
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->validateCsrfTokens(except: [
+            'webhook/*',
+        ]);
+    })
+    ->create();
 ```
 
 ### Ruby（Rails）

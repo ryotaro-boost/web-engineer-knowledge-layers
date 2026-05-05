@@ -48,9 +48,14 @@ Toast通知はブラウザにネイティブ要素がなく、HTML/CSS/JSの3層
 Toast通知のアクセシビリティには **ARIA Live Region** が不可欠。`role="status"` または `role="alert"` を使うことで、スクリーンリーダーが動的に挿入されたコンテンツを読み上げる:
 
 ```html
-<!-- Toastコンテナ — 画面の固定位置に配置 -->
-<div id="toast-container" class="toast-container" aria-live="polite">
-  <!-- JSで動的にToast要素を挿入 -->
+<!-- 情報・成功通知用コンテナ — 読み上げ中なら待ってから通知 -->
+<div id="toast-container-polite" class="toast-container" aria-live="polite" aria-atomic="false">
+  <!-- 情報・成功 Toast を挿入 -->
+</div>
+
+<!-- エラー・警告用コンテナ — 即座に読み上げ -->
+<div id="toast-container-assertive" class="toast-container" role="alert" aria-atomic="false">
+  <!-- エラー Toast を挿入 -->
 </div>
 ```
 
@@ -58,6 +63,8 @@ Toast通知のアクセシビリティには **ARIA Live Region** が不可欠�
 - `aria-live="assertive"` — 現在の読み上げを中断して即座に通知する（エラー通知向け）
 - `role="status"` — 暗黙的に `aria-live="polite"` と `aria-atomic="true"` を持つ。情報やステータス更新に適切
 - `role="alert"` — 暗黙的に `aria-live="assertive"` と `aria-atomic="true"` を持つ。エラーや重要な警告に適切
+
+> **重要な設計上の注意:** ARIA Live Region は祖先要素の `aria-live` 値で挙動が決まる。`aria-live="polite"` のコンテナの中に子として `role="alert"`（暗黙的に `aria-live="assertive"`）を入れると、スクリーンリーダー実装ごとに挙動が分かれる(NVDA / VoiceOver で異なる結果になる)。**polite 用と assertive 用で物理的にコンテナを分離する**のが WAI-ARIA 公式の推奨設計。個別の Toast 要素には `role` を付けず、親コンテナの `aria-live` / `role` に任せる。
 
 ### CSS — 配置とアニメーション
 
@@ -123,11 +130,17 @@ interface ToastOptions {
 }
 
 class ToastManager {
-  #container: HTMLElement;
+  #politeContainer: HTMLElement;     // aria-live="polite" のコンテナ
+  #assertiveContainer: HTMLElement;  // role="alert" のコンテナ
   #defaultDuration: number;
 
-  constructor(containerId = 'toast-container', defaultDuration = 4000) {
-    this.#container = document.getElementById(containerId)!;
+  constructor(
+    politeId = 'toast-container-polite',
+    assertiveId = 'toast-container-assertive',
+    defaultDuration = 4000,
+  ) {
+    this.#politeContainer = document.getElementById(politeId)!;
+    this.#assertiveContainer = document.getElementById(assertiveId)!;
     this.#defaultDuration = defaultDuration;
   }
 
@@ -135,10 +148,10 @@ class ToastManager {
     const toast = document.createElement('div');
     toast.className = `toast toast--${variant}`;
     toast.textContent = message;
-    // role を設定してスクリーンリーダーに通知
-    toast.setAttribute('role', variant === 'error' ? 'alert' : 'status');
-
-    this.#container.appendChild(toast);
+    // 個別の Toast に role を付けない (親コンテナで決まる)。
+    // variant に応じてどちらの Live Region に追加するかを切り替える
+    const target = variant === 'error' ? this.#assertiveContainer : this.#politeContainer;
+    target.appendChild(toast);
 
     // アニメーション開始（次フレームまで待つ）
     requestAnimationFrame(() => {
@@ -156,6 +169,10 @@ class ToastManager {
 }
 
 // 使用例
+// HTML には事前に
+//   <div id="toast-container-polite" aria-live="polite"></div>
+//   <div id="toast-container-assertive" role="alert"></div>
+// を配置しておくこと
 const toastManager = new ToastManager();
 toastManager.show('変更を保存しました', { variant: 'success' });
 toastManager.show('ネットワークエラーが発生しました', { variant: 'error', duration: 6000 });
@@ -193,15 +210,28 @@ function useToast(duration = 4000) {
 }
 
 // コンポーネント
+// polite と assertive で物理的にコンテナを分離する。子の Toast には role を付けない
 function ToastContainer({ toasts }: { toasts: Toast[] }) {
+  const politeToasts = toasts.filter(t => t.variant !== 'error');
+  const assertiveToasts = toasts.filter(t => t.variant === 'error');
+
   return (
-    <div className="toast-container" aria-live="polite">
-      {toasts.map(t => (
-        <div key={t.id} className={`toast toast--${t.variant} show`} role="status">
-          {t.message}
-        </div>
-      ))}
-    </div>
+    <>
+      <div className="toast-container" aria-live="polite" aria-atomic="false">
+        {politeToasts.map(t => (
+          <div key={t.id} className={`toast toast--${t.variant} show`}>
+            {t.message}
+          </div>
+        ))}
+      </div>
+      <div className="toast-container" role="alert" aria-atomic="false">
+        {assertiveToasts.map(t => (
+          <div key={t.id} className={`toast toast--${t.variant} show`}>
+            {t.message}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 

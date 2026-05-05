@@ -1,14 +1,29 @@
 ---
 layer: 6
 topic: CORS
-type: topic
 status: 🔴 未着手
 created: 2026-03-30
+prerequisites: ["[[HTTP-HTTPS]]", "[[DNS]]", "[[認証と認可]]"]
+next_steps: ["[[CSRF]]", "[[最小権限の原則]]", "[[API設計-REST-GraphQL]]"]
+difficulty: intermediate
+estimated_minutes: 30
+ai_collaboration: partial
 ---
 
 # CORS（オリジン間リソース共有 / Cross-Origin Resource Sharing）
 
 > **一言で言うと:** ブラウザの同一オリジンポリシー（Same-Origin Policy）を**安全に緩和する**ための仕組み。サーバーがHTTPレスポンスヘッダで「このオリジンからのリクエストは許可する」と宣言することで、異なるオリジン間の通信を制御する。「なぜAPIが呼べないか」のトラブルの大半はCORS設定の問題。
+
+## 3分で全体像
+
+- **何を解決する技術か:** ブラウザの同一オリジンポリシーを「**サーバーの明示的な許可**」をもって安全に緩和する。フロント / API / 認可サーバー / CDN が別オリジンに散る現代アーキテクチャで、悪意あるサイトの読み取りを防ぎつつ正規通信を成立させる
+- **代表的な使用シーン:** SPA（`app.example.com`）→ API（`api.example.com`）、サードパーティ API の埋め込み、SaaS の API 公開、WebSocket / SSE のオリジン検証、CDN 経由の静的アセットフォント、iframe + postMessage、OAuth 認可サーバーへのトークン要求
+- **これだけは覚える3つ:**
+    1. **CORS は「ブラウザの仕組み」、サーバー保護ではない** — `curl` / Postman / サーバー間通信には CORS 制約が一切ない。**アクセス制御は[[認証と認可]]で別途必須**。「CORS を厳しくしたから安全」は誤り
+    2. **CORS は CSRF を防がない** — CORS が制限するのは**レスポンスの読み取り**。`<form>` POST はプリフライトなしで送信され、サーバーに到達する。CSRF 防御は別途[[CSRF]]トークン + SameSite で行う
+    3. **`Content-Type: application/json` でプリフライトが飛ぶ** — トラブルの最頻出原因。`Access-Control-Allow-Credentials: true` と `Access-Control-Allow-Origin: *` の併用は**ブラウザに拒否される**ため、Cookie 認証では具体的なオリジンを返す。`Vary: Origin` の付け忘れは CDN キャッシュ汚染の典型ハマりポイント
+- **AIに任せやすいか:** **一部任せられる** — Express の `cors` ミドルウェア、FastAPI の `CORSMiddleware`、Spring Security の `CorsConfiguration` 等の**標準ミドルウェア導入**は AI が定型実装可。一方で「**許可オリジンの allowlist 設計**」「**Credentials を伴うクロスサイト構成の妥当性**」「**OAuth コールバックや iframe 連携の例外処理**」は人間判断。AI は `Allow-Origin: *` をデフォルトで生成しがち
+- **詰まったらここを読む:** [[CSRF]] / [[HTTP-HTTPS]] / [[認証と認可]] / [[API設計-REST-GraphQL]]
 
 ## なぜ必要か
 
@@ -231,14 +246,76 @@ flowchart LR
 | `Vary: Origin` の付け忘れ | CDNキャッシュが誤ったオリジンのレスポンスを返す | 動的オリジン設定時は必ず `Vary: Origin` |
 | CORSミドルウェアとOPTIONSルートの二重定義 | プリフライトが2回処理されるか優先順位の混乱 | ミドルウェアで一元管理 |
 
-## AIによる実装のアンチパターン
+## AIエージェントとの協働
 
-| アンチパターン | なぜ問題か | 対策 |
+> このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+
+### AIに任せられる部分 / 人間が判断すべき部分
+
+| タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| `Allow-Origin: *` をデフォルトで生成 | LLMは動作させることを優先して全開放しがち | 具体的なオリジンを環境変数から取得 |
-| `Allow-Methods: *` や `Allow-Headers: *` | 必要最小限の原則に反し攻撃面が広がる | 実際に使うメソッド・ヘッダのみ列挙 |
-| CORSミドルウェアと手動OPTIONSハンドラの併設 | 二重処理で予期しない挙動になる | フレームワークのCORS機能かミドルウェアかどちらかに統一 |
-| `Max-Age` を設定しない | 毎回プリフライトが飛びパフォーマンスが低下 | `Max-Age: 7200`（Chromium 系の上限に合わせる）を設定してキャッシュ。詳細は[[details/CORS]] |
+| Express `cors` / FastAPI `CORSMiddleware` / Spring `CorsConfiguration` の導入 | 実装・レビュー両方 AI 委任。`/review-ai-code` で `*` 全開放と Credentials 併用を検出 | 環境別の許可オリジンリストを明示（`process.env.ALLOWED_ORIGINS`） |
+| プリフライトキャッシュ（`Max-Age`）の設定 | 値の選定（7200 / 86400）と実装は AI 任せ | Chromium / Firefox / Safari の上限差を踏まえた値の最終判断 |
+| `Vary: Origin` の付与 | 実装は AI、CDN 配下での挙動レビューも AI に任せる | CDN（CloudFront / Cloudflare）のキャッシュキー設計との整合性確認 |
+| 動的オリジン検証（リクエストの `Origin` を allowlist と照合） | 実装は AI、`/review-ai-code` で「`includes` での部分一致」誤りを検出 | サブドメイン許可方針（`*.example.com` を許すか）の意思決定 |
+| WebSocket / SSE の `Origin` 検証 | 実装は AI、テストも AI に任せられる | 認証されていないオリジンからの接続をどう扱うかの仕様判断 |
+| CORS エラーの診断（DevTools の Network タブ確認手順） | デバッグ手順の生成は AI 任せ | 実環境（CDN / WAF / プロキシ）の特殊事情の切り分け |
+
+### AI生成コードのレビュー観点（このトピック固有）
+
+AI生成物を受け取ったとき、最低限ここを見る。
+
+1. **`Access-Control-Allow-Origin: *` がデフォルトで生成されていないか** — AI は動作優先で全開放を提案しがち。本番では具体的なオリジンを環境変数から取得し、`Allow-Credentials: true` と併用しないこと
+2. **`Vary: Origin` が付いているか（動的オリジンを返す場合）** — オリジンに応じて `Allow-Origin` の値を変える時に Vary が無いと、CDN や中間プロキシがオリジン A 向けのレスポンスをオリジン B にも返してしまう（キャッシュ汚染）。AI は付け忘れがち
+3. **CORS と CSRF の混同がないか** — `/review-ai-code` で「CORS で CSRF 対策をしたつもり」のコードを検出する。CORS はレスポンス読み取り制限であり、`<form>` POST の到達は止めない
+
+### 効くプロンプトの型
+
+このトピックに関する実装をAIに依頼するとき、コンテキストとして渡すべき情報・制約・成功基準のテンプレ。
+
+```
+# 前提（プロジェクトの状況・既存のコード規約）
+- フロント: app.example.com（本番）、localhost:5173（開発）
+- API: api.example.com
+- 認証: HttpOnly + Secure + SameSite=Lax の Session Cookie（Cookie 認証）
+- フレームワーク: Express 5 + cors パッケージ
+- CDN: CloudFront（API レスポンスもキャッシュ可能性あり）
+
+# やってほしいこと
+- /api/* の CORS を設定する。許可オリジンは ALLOWED_ORIGINS 環境変数（カンマ区切り）から動的に決定
+
+# 守ってほしい制約（このトピック固有のもの）
+- credentials: true（Cookie 送信が必須）
+- Allow-Origin: * は禁止（Credentials と併用不可、かつ攻撃面が広がる）
+- Vary: Origin を必ず付与（CDN キャッシュ汚染防止）
+- Max-Age は 7200 秒（Chromium の上限）
+- 許可メソッドは GET/POST/PUT/DELETE のみ、許可ヘッダは Authorization, Content-Type のみ
+
+# 完了の判断基準
+- localhost:5173 から fetch('https://api.example.com/users', { credentials: 'include' }) が成功
+- evil.com からの fetch は CORS エラーで失敗
+- レスポンスに Vary: Origin が含まれる
+- プリフライト OPTIONS が 204 を返し、本リクエストの前に毎回飛ばない（Max-Age が効いている）
+```
+
+### AI実装のアンチパターン
+
+LLM生成コードで頻出する過剰設計・誤用パターン。レビュー時の照合表として使う。
+
+| アンチパターン | なぜ問題か | レビュー観点 / 対策 |
+|---|---|---|
+| `Allow-Origin: *` をデフォルトで生成 | LLM は動作優先で全開放しがち、Credentials と併用不可 | 具体的なオリジンを環境変数から取得 |
+| `Allow-Methods: *` / `Allow-Headers: *` | 必要最小限の原則に反し攻撃面が広がる | 実際に使うメソッド・ヘッダのみ列挙 |
+| CORS ミドルウェアと手動 OPTIONS ハンドラの併設 | 二重処理で予期しない挙動 | フレームワークの CORS 機能かミドルウェアどちらかに統一 |
+| `Max-Age` を設定しない | 毎回プリフライトが飛びパフォーマンス低下 | `Max-Age: 7200`（Chromium の上限）でキャッシュ |
+| `Origin` を `String.includes` で部分一致検証 | `evil-app.example.com` が `app.example.com` の検索に含まれてしまう誤検証 | 完全一致 (`===`) または `URL` パースで host を確認 |
+| 動的オリジンを返しているのに `Vary: Origin` 抜け | CDN / プロキシでキャッシュ汚染、A のレスポンスが B に届く | 動的オリジン時は必ず `Vary: Origin` |
+| CORS で CSRF 対策をしたつもり | CORS はリクエスト送信を止めない | CSRF トークン + `SameSite` で対策 |
+| `Allow-Credentials: true` を無条件に設定 | Bearer Token 構成では不要、Cookie 漏洩リスク増 | Cookie 認証時のみ true、Bearer 構成では false（または未設定） |
+| ローカル開発の `*` 設定をそのまま本番へ | `localhost` 許可が本番に紛れ込む | 環境変数で完全に分離、CI で本番設定をチェック |
+
+→ レイヤー横断のアンチパターン索引: [[_anti-patterns/_index|AIアンチパターン索引]]
 
 ## 具体例
 
@@ -440,6 +517,51 @@ flowchart TD
 - MDN Web Docs: Same-origin policy — 同一オリジンポリシーの詳細
 - web.dev: Cross-Origin Resource Sharing — 実践的な解説とベストプラクティス
 - [[details/CORS]] — プリフライトキャッシュのブラウザ別上限、サブドメインワイルドカード、WebSocket、iframe postMessage、COOP/COEP/CORP との関係などの応用トピック
+
+## 理解度セルフチェック
+
+> 答えられなければ本文に戻る。答えはこのファイル内に必ずある。
+
+1. 「同一オリジンポリシーが制限するもの」と「制限しないもの」を、CSRF との関係に触れながら説明せよ。
+2. 「`Access-Control-Allow-Origin: *` を設定すれば、どのオリジンからも安全に API を叩ける」は正しいか。Yes / No と、3 つの問題点を挙げよ。
+3. 次のコードは Express の CORS 設定である。何が問題で、本番運用に向けてどう直すべきかを述べよ。
+   ```typescript
+   app.use((req, res, next) => {
+     const origin = req.headers.origin ?? '';
+     // 自社ドメインを含むなら許可
+     if (origin.includes('example.com')) {
+       res.setHeader('Access-Control-Allow-Origin', origin);
+     } else {
+       res.setHeader('Access-Control-Allow-Origin', '*');
+     }
+     res.setHeader('Access-Control-Allow-Credentials', 'true');
+     res.setHeader('Access-Control-Allow-Methods', '*');
+     res.setHeader('Access-Control-Allow-Headers', '*');
+     if (req.method === 'OPTIONS') return res.status(204).end();
+     next();
+   });
+   ```
+
+> [!note]- 解答の指針
+>
+> > [!info] 用語ミニ辞典
+> > - **同一オリジンポリシー（Same-Origin Policy）**: スキーム + ホスト + ポートが完全一致するオリジンのリソースのみ JavaScript からアクセス・読み取り可能とするブラウザの基本セキュリティ。クロスオリジンに対しては「リクエストは送るが**レスポンスを JS から読めない**」状態にする
+> > - **オリジン（Origin）**: スキーム + ホスト + ポートの組。`https://app.example.com` と `https://app.example.com:8443` も別オリジン、`http://` と `https://` も別オリジン
+> > - **プリフライト（Preflight Request）**: 単純リクエストの条件を満たさない時、ブラウザが本リクエストの前に送る `OPTIONS` リクエスト。`Access-Control-Request-Method` / `Access-Control-Request-Headers` で「これからこういう本リクエストを送るが許可するか」を尋ねる
+> > - **`Vary` ヘッダ**: HTTP キャッシュに「リクエストヘッダの値ごとに別エントリで保存せよ」と指示するヘッダ。`Vary: Origin` を付けないと、オリジン A 向けに動的に返した `Allow-Origin` がオリジン B にもキャッシュされて返り、CORS エラーや情報漏洩の原因となる
+> > - **Credentials**: Cookie / `Authorization` ヘッダ / TLS クライアント証明書の総称。`fetch(..., { credentials: 'include' })` で送信を有効化、サーバー側は `Access-Control-Allow-Credentials: true` で受け入れを宣言する。`Allow-Origin: *` と併用不可
+>
+> 1. **制限するもの:** クロスオリジンの**レスポンスの JS からの読み取り**（`fetch().then(res => res.text())` 等）。攻撃者が evil.com から `bank.com/api/balance` を叩いても残高を読めない
+>     **制限しないもの:** クロスオリジンへの**リクエスト送信そのもの**。`<form action="https://bank.com/transfer" method="POST">` は送信され、Cookie も自動付与される。これが CSRF の根拠であり、CORS が CSRF を防がない理由。CSRF 防御は[[CSRF]]トークンや SameSite Cookie で別途行う
+> 2. **No**。3 つの問題:
+>     - **Credentials と併用不可** — `Allow-Credentials: true` と `Allow-Origin: *` をブラウザが明示的に拒否する。Cookie 認証や `Authorization` ヘッダ送信が一切できなくなる
+>     - **攻撃面の拡大** — どこのサイトからでも API を呼ばれる。認証されていない API でも、**サーバー保護がアクセス制御だけ**なら、ブラウザ経由の攻撃ベクトルが増える
+>     - **意図的なクロスサイト読み取りリスク** — 公開 API のつもりでも、内部 API と URL を混ぜていると、ユーザーセッションに紐づく情報が `evil.com` から読めてしまう。**設計判断としては許可オリジンの allowlist が原則**で、`*` は明確に「公開 API」と決めた場合だけ
+> 3. **3 つの問題**:
+>     - **`origin.includes('example.com')` の部分一致** — `evil-example.com` や `example.com.evil.io` が **マッチしてしまう**。完全一致または `new URL(origin).host` で host を比較する。許可リストは配列で持って `===` 検証
+>     - **`Allow-Origin: *` フォールバック + `Allow-Credentials: true`** — ブラウザが拒否する組み合わせ。本番リクエストはエラーになるし、仮に効いたとしても無認可で全開放になる。**許可しないオリジンには `Allow-Origin` を付けない**（ヘッダ自体を出さない）
+>     - **`Allow-Methods: *` / `Allow-Headers: *`** — 必要最小限の原則違反。実際に使う `GET, POST, PUT, DELETE` と `Authorization, Content-Type` のみ列挙する
+>     - 加えて: `Vary: Origin` の付け忘れによる CDN キャッシュ汚染、`Access-Control-Max-Age` 未設定によるプリフライト多発も改善点。修正版は `cors` パッケージで `origin: (process.env.ALLOWED_ORIGINS ?? '').split(',').filter(Boolean)`、`credentials: true`、`methods: ['GET','POST','PUT','DELETE']`、`maxAge: 7200` を指定する
 
 ## 学習メモ
 

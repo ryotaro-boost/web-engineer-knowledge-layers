@@ -85,11 +85,11 @@ flowchart TB
 | LIMIT との相性 | 単純な JOIN は悪い（後述の落とし穴）／LATERAL JOIN なら親に LIMIT を効かせやすい | 良い（親に LIMIT、関連は IN で別取得） |
 | 1対1 / 多対1 | 適している | 適している |
 | 1対多 / 多対多 | カーディナリティ次第で重複が爆発する（LATERAL JOIN なら緩和） | 安定して使える |
-| 代表 API | SQLAlchemy `joinedload`, TypeORM `leftJoinAndSelect`, GORM `Joins`, Prisma `include`（既定、5.8 以降） | SQLAlchemy `selectinload`, GORM `Preload`, Rails `preload`, Prisma `include` + `relationLoadStrategy: "query"` |
+| 代表 API | SQLAlchemy `joinedload`, TypeORM `leftJoinAndSelect`, GORM `Joins`, Prisma `include`（Prisma 6 で既定が `join`） | SQLAlchemy `selectinload`, GORM `Preload`, Rails `preload`, Prisma `include` + `relationLoadStrategy: "query"` |
 
 実務では、**1対多・多対多は IN句方式、1対1・多対1（必ず 1 行返るもの）は JOIN 方式**が無難な指針になる。ただし PostgreSQL の LATERAL JOIN を活用する Prisma 5.8+ のような実装は、1対多でも単一クエリで効率的に取得できるため、ORM の実装を確認した上で判断するのが望ましい。
 
-> **Prisma の relationLoadStrategy について:** Prisma は v5.8.0（2024 年）で `relationLoadStrategy` をプレビュー導入し、2025 年中の GA 後は `join`（PostgreSQL では LATERAL JOIN、MySQL では相関サブクエリで単一クエリ）が**既定**になっている。それ以前は IN句方式相当の動作が既定だった。`relationLoadStrategy: "query"` を明示すれば従来の IN句方式に切り替えられる。
+> **Prisma の relationLoadStrategy について:** Prisma は v5.8.0 (2024-01) で `relationLoadStrategy` をプレビュー導入し、**Prisma 6 (2024-10 GA) で安定化**。PostgreSQL では `join`（LATERAL JOIN による単一クエリ）が**既定**になり、MySQL は相関サブクエリで対応する。Prisma 5 系まではすべて IN句方式（2 クエリ）が既定だった。従来の IN句方式に戻すには `relationLoadStrategy: "query"` を明示する。
 
 ### Rails の `includes` / `preload` / `eager_load` の違い
 
@@ -127,8 +127,9 @@ const users = await prisma.user.findMany();
 // users[0].posts; // ❌ TypeScript エラー: Property 'posts' does not exist
 
 // Good: include で Eager Loading
-//   既定（5.8 以降の relationLoadStrategy: "join"）では、
+//   Prisma 6 (2024-10 GA) 以降は relationLoadStrategy: "join" が既定。
 //   PostgreSQL は LATERAL JOIN、MySQL は相関サブクエリで「単一クエリ」で取得する。
+//   (Prisma 5 系までは IN句方式が既定だった)
 const usersWithPosts = await prisma.user.findMany({
   include: { posts: true },
 });
