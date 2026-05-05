@@ -1,7 +1,6 @@
 ---
 layer: 4
 topic: API設計（REST / GraphQL）
-type: topic
 status: 🔴 未着手
 created: 2026-03-28
 prerequisites: ["[[HTTP-HTTPS]]", "[[ルーティングとミドルウェア]]", "[[バリデーション]]"]

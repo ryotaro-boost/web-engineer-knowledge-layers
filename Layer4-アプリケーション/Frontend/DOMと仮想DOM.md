@@ -1,7 +1,6 @@
 ---
 layer: 4
 topic: DOMと仮想DOM
-type: topic
 status: 🔴 未着手
 created: 2026-03-29
 prerequisites: ["[[HTML-CSS-JS]]"]
