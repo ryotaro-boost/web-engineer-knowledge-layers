@@ -63,17 +63,31 @@ REST は「送金 = transactions リソースを 1 件作成する」と捉え�
 RPC は **REST より古い** 1984 年起源の概念で、Web 黎明期にエンタープライズ系の主役だった。2000 年代に REST が広く採用されて一旦下火になったが、2015 年の gRPC で再評価され、現代では役割を分けて共存している。
 
 ```mermaid
-timeline
-    title 主な RPC / API プロトコル
-    1984 : Birrell & Nelson 論文 (RPC 概念化)
-    1988 : Sun RPC / ONC RPC (NFS 基盤)
-    1991 : CORBA 1.0 (オブジェクト指向 RPC)
-    1998 : SOAP / XML-RPC (XML ベース)
-    2000 : Roy Fielding "REST" 博士論文
-    2010 : JSON-RPC 2.0
-    2015 : gRPC (HTTP/2 + Protobuf で復活)
-    2020 : tRPC (TypeScript エンド to エンド型)
+flowchart TB
+    A["<b>1984</b> — Birrell & Nelson 論文<br/>（RPC の概念化）"]
+    B["<b>1988</b> — Sun RPC / ONC RPC<br/>（NFS の基盤）"]
+    C["<b>1991</b> — CORBA 1.0<br/>（オブジェクト指向 RPC）"]
+    D["<b>1998</b> — SOAP / XML-RPC<br/>（XML ベース）"]
+    E["<b>2000</b> — Roy Fielding<br/>REST 博士論文"]
+    F["<b>2010</b> — JSON-RPC 2.0"]
+    G["<b>2015</b> — gRPC<br/>（HTTP/2 + Protobuf で復活）"]
+    H["<b>2020</b> — tRPC<br/>（TypeScript エンド to エンド型）"]
+    A --> B --> C --> D --> E --> F --> G --> H
+
+    %% 旧 RPC 時代（1984-1998）
+    style A fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    style B fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    style C fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    style D fill:#ffe0b2,stroke:#e65100,stroke-width:2px
+    %% REST 登場（2000）— RPC が一旦下火に
+    style E fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    %% 現代 RPC の復活（2010-）
+    style F fill:#bbdefb,stroke:#1565c0,stroke-width:2px
+    style G fill:#bbdefb,stroke:#1565c0,stroke-width:2px
+    style H fill:#bbdefb,stroke:#1565c0,stroke-width:2px
 ```
+
+> 色分けは時代区分: 🟧 旧 RPC 時代（CORBA / SOAP 系）→ 🟩 REST 登場で一旦下火 → 🟦 現代 RPC の復活。下の「3 つの主因」がこの 🟦 期を生んだ。
 
 RPC が再評価された主因は次の 3 つ。
 
