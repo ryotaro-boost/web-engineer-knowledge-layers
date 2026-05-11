@@ -227,7 +227,7 @@ DNSは名前解決以外にも多くの用途がある:
 | Terraform / Route53 / Cloud DNS の DNS レコード定義 | 仕様（A/CNAME/MX/TXT のリスト + TTL）を渡して任せる | TTL の値・alias 先・evaluate_target_health の有無 |
 | SPF / DKIM / DMARC の TXT レコード組み立て | 利用するメール配信元（SES, SendGrid 等）を渡して任せる | DMARC ポリシーの強さ（none → quarantine → reject）の段階移行判断 |
 | `dig` / `nslookup` コマンドの組み立て | 調査目的（A レコード確認、TTL 確認、トレース）を渡して任せる | 結果の解釈（伝播状況・キャッシュサーバーごとの差異） |
-| **CNAME チェーン・TTL レビュー** | `/review-ai-code` でレビューさせる | 指摘の妥当性判断 |
+| **CNAME チェーン・TTL レビュー** | AIコードレビュー観点でレビューさせる | 指摘の妥当性判断 |
 | ドメイン移行手順書のドラフト | 「現状 / 目標 / 旧 TTL」を渡して任せる | 移行ウィンドウの設定、ロールバック条件、関係者連絡 |
 | ヘルスチェック連動フェイルオーバー設計 | 候補（DNS切替 / Anycast / L7 LB）をAIに比較させる | RTO/RPO の要件、コスト、運用体制を踏まえて選定 |
 | アプリ側 DNS キャッシュ設定（Java の `networkaddress.cache.ttl` 等） | デフォルト値の問題点を AI に指摘させる | 本番のフェイルオーバー要件と整合させて確定 |

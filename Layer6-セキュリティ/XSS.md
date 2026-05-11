@@ -234,13 +234,13 @@ CSP設計の原則:
 ## AIエージェントとの協働
 
 > このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
-> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（AIコードレビュー観点で横断アンチパターン照合を行う）。
 
 ### AIに任せられる部分 / 人間が判断すべき部分
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| テンプレートエンジン経由の出力（React JSX / Jinja2 `{{ }}` / `html/template`） | 実装・レビュー両方 AI 委任。`/review-ai-code` で `innerHTML` / `dangerouslySetInnerHTML` / `v-html` の検出を依頼 | 「ユーザーが Markdown / HTML 投稿できる仕様」かどうかの**仕様判断** — 受け入れる場合のみ DOMPurify 等を導入 |
+| テンプレートエンジン経由の出力（React JSX / Jinja2 `{{ }}` / `html/template`） | 実装・レビュー両方 AI 委任。AIコードレビュー観点で `innerHTML` / `dangerouslySetInnerHTML` / `v-html` の検出を依頼 | 「ユーザーが Markdown / HTML 投稿できる仕様」かどうかの**仕様判断** — 受け入れる場合のみ DOMPurify 等を導入 |
 | CSP ヘッダ生成（helmet / `Content-Security-Policy`） | 実装は AI、レビューも `'unsafe-inline'` / `'unsafe-eval'` の混入を AI に検出させる | nonce 戦略の選定（リクエストごと vs ビルド時 hash）、外部ドメイン許可リストの妥当性 |
 | DOMPurify / sanitize-html の適用 | 実装は AI。設定オプションのレビューも AI に任せられる | 「どこまで HTML タグを許可するか」のビジネス判断（`<iframe>` 許可可否など） |
 | `href` / `src` 属性のプロトコル検証 | パターン実装は AI（`/^https?:\/\//` 等） | 許可するスキームの方針（`mailto:` / `tel:` を許すか） |

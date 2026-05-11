@@ -175,13 +175,13 @@ SPA（Single Page Application）のLCPが悪くなりやすいのは事実だが
 ## AIエージェントとの協働
 
 > このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
-> Core Web Vitals の **計装コード**（`web-vitals` の `onLCP` / `onINP` / `onCLS`）や **個別の最適化パターン**（`width`/`height` 指定、`fetchpriority`、`font-display: swap`）は AI に高品質に書かせやすい。一方で「**どの要素が実際に LCP 候補か**」「**何が CLS の原因か**」は **DevTools / Lighthouse / CrUX を実際に読む人間判断**が必須。AI は「全画像に `loading="lazy"`」「全コンポーネントに `React.memo`」「`requestIdleCallback` で全部包む」のような一律最適化を提案しがちで、`/review-ai-code` で必ず検出する。
+> Core Web Vitals の **計装コード**（`web-vitals` の `onLCP` / `onINP` / `onCLS`）や **個別の最適化パターン**（`width`/`height` 指定、`fetchpriority`、`font-display: swap`）は AI に高品質に書かせやすい。一方で「**どの要素が実際に LCP 候補か**」「**何が CLS の原因か**」は **DevTools / Lighthouse / CrUX を実際に読む人間判断**が必須。AI は「全画像に `loading="lazy"`」「全コンポーネントに `React.memo`」「`requestIdleCallback` で全部包む」のような一律最適化を提案しがちで、AIコードレビュー観点で必ず検出する。
 
 ### AIに任せられる部分 / 人間が判断すべき部分
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| `web-vitals` ライブラリの計装と分析基盤への送信実装 | AI 実装、`/review-ai-code` でレビュー | どの分析基盤に送るか（自社 BigQuery / Datadog / GA4）の判断は人間 |
+| `web-vitals` ライブラリの計装と分析基盤への送信実装 | AI 実装、AIコードレビュー観点でレビュー | どの分析基盤に送るか（自社 BigQuery / Datadog / GA4）の判断は人間 |
 | `<img>` の `width`/`height` / `aspect-ratio` / `fetchpriority` の付与 | AI が網羅的に書く | LCP 候補画像の特定（DevTools の Performance パネル）は人間 |
 | Critical CSS の抽出と `<style>` インライン化 | AI に critical / critters 等の導入を任せる | CSP との衝突（`nonce` / `hash` 採用）は人間判断 |
 | CLS 対策のスケルトンUI / プレースホルダー実装 | AI が雛形を書く | 動的コンテンツ（広告・同意バナー・遅延 API）の挿入位置設計は人間判断 |

@@ -130,7 +130,7 @@ CDNはオリジンの前段に立つが、オリジンのIPアドレスが漏洩
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| `Cache-Control` ヘッダー設定パターン（HTML / アセット / API） | AI 実装、`/review-ai-code` でレビュー | 個人化コンテンツの判定（Cookie / `Authorization` を含むかどうか）は人間 |
+| `Cache-Control` ヘッダー設定パターン（HTML / アセット / API） | AI 実装、AIコードレビュー観点でレビュー | 個人化コンテンツの判定（Cookie / `Authorization` を含むかどうか）は人間 |
 | Cache Busting（ハッシュ付きファイル名）のビルド設定 | AI に Webpack / Vite / esbuild の設定を任せる | デプロイフローとの整合（ハッシュファイル名と HTML の参照同期）は人間判断 |
 | Cloudflare Workers / Lambda@Edge / Vercel Edge のスクリプト | AI が雛形を書く | エッジで動くコードの**冪等性・データ整合性**は人間判断（書き込みは原則オリジンに集約） |
 | CDN 設定の IaC 化（Terraform / Pulumi） | AI に CloudFront / Cloudflare の Terraform 雛形を任せる | 環境（ステージング / 本番）ごとのドメイン分離・WAF ルールは人間判断 |

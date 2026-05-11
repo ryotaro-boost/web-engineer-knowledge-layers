@@ -22,7 +22,7 @@ ai_collaboration: heavy
     1. **仮想DOMは速いから使うのではない** — 最適に書かれた素のDOM操作のほうが速い。仮想DOMの価値は「**宣言的に書ける**」こと。Svelte / Solid のような「仮想DOMなし宣言的UI」も成立するため、仮想DOM自体は手段の1つ
     2. **`key` は配列インデックスではなく安定した ID** — `key={index}` だと先頭挿入で全要素再マウントされる。`key={item.id}` のように **データ固有の安定キー**を使う
     3. **不要な再レンダリングはコストになる** — 仮想DOMの生成と差分計算自体にコストがあるため、巨大なリストや高頻度更新では `React.memo` / `useMemo` / コンポーネント分割で抑える。ただし**計測してから**メモ化する（DevTools Profiler で再レンダリング原因特定）
-- **AIに任せやすいか:** **任せやすい** — React/Vue の宣言的UI記述・カスタムHook の抽出・Reconciliation を意識した key 設計は AI が高品質に書ける。ただし「**`key={index}` を生成する**」「**`React.memo` を全コンポーネントに適用**」「**`dangerouslySetInnerHTML` をサニタイズなしで使う**」など典型的な AI のクセがあり、`/review-ai-code` で必ず検出する
+- **AIに任せやすいか:** **任せやすい** — React/Vue の宣言的UI記述・カスタムHook の抽出・Reconciliation を意識した key 設計は AI が高品質に書ける。ただし「**`key={index}` を生成する**」「**`React.memo` を全コンポーネントに適用**」「**`dangerouslySetInnerHTML` をサニタイズなしで使う**」など典型的な AI のクセがあり、AIコードレビュー観点で必ず検出する
 - **詰まったらここを読む:** [[HTML-CSS-JS]] / [[コンポーネント設計]] / [[状態管理]] / [[Reactの設計思想とフック]]
 
 ## なぜ必要か
@@ -314,13 +314,13 @@ graph LR
 ## AIエージェントとの協働
 
 > このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
-> 宣言的UI・カスタムHook・Reconciliation を意識した key 設計は AI に任せやすい一方、**「`key={index}` を生成」「`React.memo` を全部適用」「`dangerouslySetInnerHTML` をサニタイズなしで使う」「`useEffect` 内で巨大なDOM操作」** が頻出。レビューも `/review-ai-code` で横断アンチパターン照合に任せられる。
+> 宣言的UI・カスタムHook・Reconciliation を意識した key 設計は AI に任せやすい一方、**「`key={index}` を生成」「`React.memo` を全部適用」「`dangerouslySetInnerHTML` をサニタイズなしで使う」「`useEffect` 内で巨大なDOM操作」** が頻出。レビューもAIコードレビュー観点で横断アンチパターン照合に任せられる。
 
 ### AIに任せられる部分 / 人間が判断すべき部分
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| 宣言的UIの記述（JSX / template） | AI 実装、`/review-ai-code` でレビュー | UX 設計・状態とコンポーネント境界の対応は人間判断 |
+| 宣言的UIの記述（JSX / template） | AI 実装、AIコードレビュー観点でレビュー | UX 設計・状態とコンポーネント境界の対応は人間判断 |
 | `key` 属性の設計 | AI に任せる | データに安定 ID があるかは要件で決める。`Date.now()` や `Math.random()` を AI が出してきたら必ず修正 |
 | `React.memo` / `useMemo` / `useCallback` の適用 | AI に提案させる | **必ず計測してから適用**。AI は予防的にメモ化を提案しがちだが、シンプルなコンポーネントでは逆効果 |
 | カスタムHook によるロジック抽出 | AI に任せる | Hook の責務分割と命名はチーム規約 |

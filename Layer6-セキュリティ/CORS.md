@@ -249,16 +249,16 @@ flowchart LR
 ## AIエージェントとの協働
 
 > このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
-> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（AIコードレビュー観点で横断アンチパターン照合を行う）。
 
 ### AIに任せられる部分 / 人間が判断すべき部分
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| Express `cors` / FastAPI `CORSMiddleware` / Spring `CorsConfiguration` の導入 | 実装・レビュー両方 AI 委任。`/review-ai-code` で `*` 全開放と Credentials 併用を検出 | 環境別の許可オリジンリストを明示（`process.env.ALLOWED_ORIGINS`） |
+| Express `cors` / FastAPI `CORSMiddleware` / Spring `CorsConfiguration` の導入 | 実装・レビュー両方 AI 委任。AIコードレビュー観点で `*` 全開放と Credentials 併用を検出 | 環境別の許可オリジンリストを明示（`process.env.ALLOWED_ORIGINS`） |
 | プリフライトキャッシュ（`Max-Age`）の設定 | 値の選定（7200 / 86400）と実装は AI 任せ | Chromium / Firefox / Safari の上限差を踏まえた値の最終判断 |
 | `Vary: Origin` の付与 | 実装は AI、CDN 配下での挙動レビューも AI に任せる | CDN（CloudFront / Cloudflare）のキャッシュキー設計との整合性確認 |
-| 動的オリジン検証（リクエストの `Origin` を allowlist と照合） | 実装は AI、`/review-ai-code` で「`includes` での部分一致」誤りを検出 | サブドメイン許可方針（`*.example.com` を許すか）の意思決定 |
+| 動的オリジン検証（リクエストの `Origin` を allowlist と照合） | 実装は AI、AIコードレビュー観点で「`includes` での部分一致」誤りを検出 | サブドメイン許可方針（`*.example.com` を許すか）の意思決定 |
 | WebSocket / SSE の `Origin` 検証 | 実装は AI、テストも AI に任せられる | 認証されていないオリジンからの接続をどう扱うかの仕様判断 |
 | CORS エラーの診断（DevTools の Network タブ確認手順） | デバッグ手順の生成は AI 任せ | 実環境（CDN / WAF / プロキシ）の特殊事情の切り分け |
 
@@ -268,7 +268,7 @@ AI生成物を受け取ったとき、最低限ここを見る。
 
 1. **`Access-Control-Allow-Origin: *` がデフォルトで生成されていないか** — AI は動作優先で全開放を提案しがち。本番では具体的なオリジンを環境変数から取得し、`Allow-Credentials: true` と併用しないこと
 2. **`Vary: Origin` が付いているか（動的オリジンを返す場合）** — オリジンに応じて `Allow-Origin` の値を変える時に Vary が無いと、CDN や中間プロキシがオリジン A 向けのレスポンスをオリジン B にも返してしまう（キャッシュ汚染）。AI は付け忘れがち
-3. **CORS と CSRF の混同がないか** — `/review-ai-code` で「CORS で CSRF 対策をしたつもり」のコードを検出する。CORS はレスポンス読み取り制限であり、`<form>` POST の到達は止めない
+3. **CORS と CSRF の混同がないか** — AIコードレビュー観点で「CORS で CSRF 対策をしたつもり」のコードを検出する。CORS はレスポンス読み取り制限であり、`<form>` POST の到達は止めない
 
 ### 効くプロンプトの型
 

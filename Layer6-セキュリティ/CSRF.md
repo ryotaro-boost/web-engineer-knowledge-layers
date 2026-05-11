@@ -230,16 +230,16 @@ flowchart TD
 ## AIエージェントとの協働
 
 > このトピックでAIコーディングエージェント（Claude Code, Copilot, Cursor 等）と協働するための観点。
-> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（`/review-ai-code` skillが横断アンチパターン照合を担う）。
+> **「AIに何をどこまで任せ、AIに何をレビューさせ、人間は何を最終判断するか」**を整理する。実装だけでなく**レビューもAIに任せられる**前提で考える（AIコードレビュー観点で横断アンチパターン照合を行う）。
 
 ### AIに任せられる部分 / 人間が判断すべき部分
 
 | タスク種類 | 任せ方（実装/レビュー） | 人間の関与 |
 |---|---|---|
-| フレームワーク標準 CSRF ミドルウェアの導入（Django / Rails / Express + csrf-csrf / Laravel） | 実装・レビュー両方 AI 委任。`/review-ai-code` で「除外ルート過多」「`SameSite=None` 誤用」を検出させる | フレームワーク選定後の整合性確認のみ |
+| フレームワーク標準 CSRF ミドルウェアの導入（Django / Rails / Express + csrf-csrf / Laravel） | 実装・レビュー両方 AI 委任。AIコードレビュー観点で「除外ルート過多」「`SameSite=None` 誤用」を検出させる | フレームワーク選定後の整合性確認のみ |
 | `SameSite` Cookie 属性の設定 | 既定値 `Lax` の選択は AI 任せ | `SameSite=None` を選ぶ場面（決済リダイレクト・iframe 埋め込み）の妥当性判断 |
 | Double Submit Cookie パターンの SPA 実装 | トークン Cookie 発行 + ヘッダ検証ロジックは AI が定型実装可 | トークン保存先（localStorage / sessionStorage / Cookie）のトレードオフ判断 |
-| CSRF 保護除外ルートの設計（Webhook 受信、外部 API コールバック） | 提案は AI、レビューは `/review-ai-code` で「全 API 除外」を検出 | 除外ルートのリスト承認、Webhook の代替認証（HMAC 署名）方式の設計 |
+| CSRF 保護除外ルートの設計（Webhook 受信、外部 API コールバック） | 提案は AI、レビューはAIコードレビュー観点で「全 API 除外」を検出 | 除外ルートのリスト承認、Webhook の代替認証（HMAC 署名）方式の設計 |
 | Origin / Referer ヘッダの検証 | 実装は AI、proxy 配下での `X-Forwarded-Host` 整合性も AI に確認させる | 信頼するプロキシの段数決定（`trust proxy`）、CDN 配下の挙動確認 |
 | 攻撃再現テスト（罠 HTML を用意して別オリジンから POST） | テスト生成・CI 組み込みは AI 委任 | テスト対象エンドポイントの優先順位決定 |
 
@@ -524,7 +524,7 @@ async function transferMoney(to: string, amount: number) {
 > 3. **3 つの問題**:
 >     - **`POST /api/webhooks/github` の CSRF 除外が認証なし** — CSRF 保護を外すこと自体は妥当（外部からの正規リクエストなのでトークンを持たせられない）だが、その代わりに `X-Hub-Signature-256` で HMAC 署名検証を入れるべき。現状は誰でも `/api/webhooks/github` に POST できる
 >     - **`GET /api/balance/refresh` で副作用** — ログ書き込みと残高再計算が走るのに GET を使っている。`<img src="https://bank.com/api/balance/refresh">` だけで攻撃される。**POST に変更**し、CSRF 保護を適用する。「読み取り専用に見える」名前と実態の乖離は典型的な落とし穴
->     - **GET ルート全般に CSRF 保護がない設計** — 上記が直っていれば構造的には正しいが、コードレビュー時には「副作用のある GET が他に紛れていないか」を `/review-ai-code` で横断確認するとよい
+>     - **GET ルート全般に CSRF 保護がない設計** — 上記が直っていれば構造的には正しいが、コードレビュー時には「副作用のある GET が他に紛れていないか」をAIコードレビュー観点で横断確認するとよい
 >     - 修正後: `app.post('/api/balance/refresh', doubleCsrfProtection, refreshBalance)`、`/api/webhooks/github` は HMAC 検証ミドルウェアを通す
 
 ## 学習メモ
