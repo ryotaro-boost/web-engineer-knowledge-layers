@@ -169,6 +169,8 @@ graph TB
 | 適した用途 | SSR、伝統的Webアプリ | SPA、モバイルアプリ、マイクロサービス間通信 |
 | CSRF耐性 | Cookie自動送信のためCSRF対策が必要 | **Authorization ヘッダで送る場合のみ** 自動送信されずCSRFに強い。**HttpOnly Cookie に保存した場合は Cookie 同様 CSRF 対策（SameSite / CSRF トークン）が必要** |
 
+> この表は説明の便宜上、「セッション = 不透明トークン + Cookie」「JWT = 自己完結トークン + ヘッダ」という典型構成を束ねている。だが本来 **トークンの形式（不透明 / JWT）と転送方法（Cookie / ヘッダ）は直交する別の軸**であり、「不透明トークン + ヘッダ転送（= JWT も Cookie も使わない方式）」や「JWT + HttpOnly Cookie」も成立する。この2軸での整理は → [[認証トークンの形式と転送方式]]
+
 ## コード例
 
 ### Express（Node.js）— セッション認証
