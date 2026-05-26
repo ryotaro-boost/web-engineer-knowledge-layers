@@ -296,7 +296,7 @@ func main() {
 
 ### 1. JWTを `localStorage` に保存する
 
-`localStorage` はJavaScriptからアクセスできるため、XSS脆弱性があるとトークンが即座に窃取される。`HttpOnly` Cookieに保存すればJSからアクセスできないため、XSSによるトークン窃取を防げる。
+`localStorage` はJavaScriptからアクセスできるため、XSS脆弱性があるとトークンが即座に窃取される。`HttpOnly` Cookieに保存すればJSからアクセスできないため、XSSによるトークン窃取を防げる。窃取のメカニズムとサニタイズ/エスケープとの多層防御関係は → [[localStorageとXSSによるトークン窃取]]。
 
 ### 2. JWTのPayloadに機密情報を含める
 

@@ -170,6 +170,8 @@ HttpOnly CookieはJavaScriptからのCookieアクセスを防ぐが、XSSの被�
 - 被害者の権限でのAPI呼び出し（Cookieは自動送信されるため、JSからアクセスできなくても利用可能）
 - CSRFトークンの読み取りとCSRF防御の無効化
 
+なお、トークンを `HttpOnly` Cookie ではなく `localStorage` に保存している場合は事情が逆で、`localStorage` は JS から読めるため XSS 1 発でトークンが直接窃取される。窃取のメカニズムと脆弱→修正コード、サニタイズとの多層防御関係は → [[localStorageとXSSによるトークン窃取]]。
+
 ### 4. 「APIがJSONを返すならXSSは関係ない」
 
 `Content-Type: application/json` でも、古いブラウザやMIMEスニッフィングによりHTMLとして解釈されるケースがある。`X-Content-Type-Options: nosniff` ヘッダを必ず設定する。また、JSONの値がフロントエンドでDOMに挿入される場合、フロントエンド側でのエスケープが必要。
