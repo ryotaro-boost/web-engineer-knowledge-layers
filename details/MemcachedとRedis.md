@@ -47,6 +47,8 @@ flowchart TD
 | クラスタリング | クライアント側の分散 | Redis Cluster（サーバー側の分散） |
 | TTL設定 | キー単位 | キー単位 |
 
+> なお、2024年のRedisライセンス変更を機に、Redis 7.2.4から分岐したBSDライセンスのフォーク **Valkey** が登場した。プロトコル・コマンドがRedis互換のため、Redis列の特性はおおむねValkeyにも当てはまる。選定時の第3の選択肢として → [[Valkey]]
+
 ## なぜセッションストアにはRedisが選ばれるのか
 
 ### 1. TTL（Time-To-Live）による自動期限切れ
@@ -285,6 +287,7 @@ Redisが停止するとセッションベースの認証が全面ダウンする
 - [[セッションとJWT]] — セッション方式ではRedis/Memcachedがストアとして使われる
 - [[キャッシュ戦略]] — Redis/Memcachedはキャッシュインフラとしても使われる。Write-through、Write-behind等の戦略
 - [[NoSQL]] — RedisはKey-Value型NoSQLの代表例。データ構造とユースケース
+- [[Valkey]] — Redisのライセンス変更を機に生まれたBSDライセンスのフォーク。Redis互換のドロップイン代替
 
 ## 参考リソース
 
