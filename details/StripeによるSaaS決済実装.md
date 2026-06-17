@@ -780,7 +780,7 @@ function hasAccess(status: Stripe.Subscription.Status): boolean {
 
 ### 5. PCI コンプライアンス
 
-Stripe Checkout や Elements を使う限り、自社サーバーにカード情報が到達しない。以下を守れば PCI DSS の最も軽い準拠レベル（SAQ A）で済む:
+Stripe Checkout や Elements を使う限り、自社サーバーにカード情報が到達しない。以下を守れば [[PCI-DSS|PCI DSS]] の最も軽い準拠レベル（SAQ A）で済む:
 
 - カード番号を自社サーバーに送信・保存しない
 - Stripe.js / Checkout を経由して決済する
