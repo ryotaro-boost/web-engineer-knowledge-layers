@@ -535,10 +535,10 @@ go work       # マルチモジュール（モノレポ）
 | **net/http**（標準） | 1.22+ で十分強力、外部依存なし |
 | **chi** | net/http 互換のミドルウェアルーター、軽量 |
 | **gin** | 高速・JSON API 向け |
-| **echo** | gin に似た書き味、よく整理された API |
+| **echo** | gin に似た書き味、よく整理された API（詳細は[[Echo]]） |
 | **fiber** | Express.js ライク、Fasthttp ベース |
 
-GraphQL なら **gqlgen**、ORM なら **GORM** や **sqlc**（生 SQL → 型付きコード生成）。
+GraphQL なら **gqlgen**、ORM なら **GORM**（詳細は[[GORM]]）や **sqlc**（生 SQL → 型付きコード生成）。Echo + GORM は Go の API サーバーで最も定番の組み合わせの一つ。
 
 ### ガベージコレクションの進化
 
