@@ -7,7 +7,7 @@ created: 2026-04-29
 
 # Go（Go / Golang）
 
-> **一言で言うと:** Go は2007年に Google で **Robert Griesemer / Rob Pike / Ken Thompson**（Unix・C・UTF-8 の生みの親）が「**C++ のビルドの遅さとデプロイの複雑さ**」への反発から設計した言語。**「Less is exponentially more」（少なさは指数的な力になる）** という Pike の哲学のもと、機能を意図的に削ぎ落とし、**Goroutine と Channel による CSP 並行モデル**・**構造的型インターフェース**・**強制された gofmt による単一フォーマット**を中核に据えた。クラウドインフラ（Docker / Kubernetes / Terraform）と高負荷 API サーバーの主流言語となり、2026年2月の Go 1.26 では Green Tea GC がデフォルト化され、cgo オーバーヘッドが30%削減された。
+> **一言で言うと:** Go は2007年に Google で **Robert Griesemer / Rob Pike / Ken Thompson**（Unix・UTF-8 の生みの親を含む Bell Labs 系譜の3名）が「**C++ のビルドの遅さとデプロイの複雑さ**」への反発から設計した言語。**「Less is exponentially more」（少なさは指数的な力になる）** という Pike の哲学のもと、機能を意図的に削ぎ落とし、**Goroutine と Channel による CSP 並行モデル**・**構造的型インターフェース**・**強制された gofmt による単一フォーマット**を中核に据えた。クラウドインフラ（Docker / Kubernetes / Terraform）と高負荷 API サーバーの主流言語となり、2026年2月の Go 1.26 では Green Tea GC がデフォルト化され、cgo オーバーヘッドが30%削減された。
 
 ## 誕生と歴史的経緯
 
@@ -17,7 +17,7 @@ created: 2026-04-29
 | 2009 | OSS 化（BSD ライセンス） |
 | 2012 | 1.0 リリース（Go 1 promise = 後方互換の約束） |
 | 2014 | Docker / Kubernetes が Go 採用、クラウド時代の中心言語へ |
-| 2015 | `context` パッケージ標準化（キャンセル伝播の標準 API） |
+| 2016 | `context` パッケージ標準化（1.7、キャンセル伝播の標準 API） |
 | 2018 | Go modules 導入（1.11、GOPATH 時代の終わり） |
 | 2022 | Generics 導入（1.18、10年越しの議論決着） |
 | 2024-02 | 1.22 / Range over int、net/http ルーティング改善 |
@@ -30,7 +30,7 @@ created: 2026-04-29
 
 Go の設計者3名はいずれも Bell Labs の系譜:
 
-- **Ken Thompson** — Unix と B言語の作者、C 言語の設計者の一人、UTF-8 設計
+- **Ken Thompson** — Unix と B言語（C の前身）の作者、UTF-8 共同設計者（C 言語そのものを設計したのは Dennis Ritchie）
 - **Rob Pike** — Plan 9 OS と Limbo 言語の設計者、UTF-8 共同設計者
 - **Robert Griesemer** — Java HotSpot コンパイラ、V8 開発の経験
 
@@ -237,6 +237,37 @@ OS スレッドとの違い:
 | 数の上限 | 数千 | 数百万 |
 | スケジューラ | OS | Go ランタイム（M:N モデル） |
 
+#### M:N スケジューラ（GMP モデル）の仕組み
+
+「M:N」とは、**M 個の Goroutine を N 個の OS スレッドに多重化して走らせる**方式。Go ランタイムは内部で **G・M・P** という3要素でこれを実現する。
+
+- **G（Goroutine）** — 実行したい処理の単位。数十万個になりうる
+- **M（Machine）** — OS スレッドの実体。実際に CPU 上で命令を走らせる
+- **P（Processor）** — G を M に割り当てるための論理的な実行コンテキスト（実行キューを保持）。**P の個数 = `GOMAXPROCS` = 同時に Go コードを実行できる並列度の上限**
+
+```mermaid
+graph TD
+    subgraph Gs["Goroutine（数万〜数十万）"]
+        G1["G"]; G2["G"]; G3["G"]; G4["G"]; G5["G"]; G6["G"]
+    end
+    subgraph Ps["P（論理プロセッサ）= GOMAXPROCS 個"]
+        P1["P1<br/>ローカル実行キュー"]
+        P2["P2<br/>ローカル実行キュー"]
+    end
+    subgraph Ms["M（OSスレッド）"]
+        M1["M1"]; M2["M2"]
+    end
+    subgraph Cores["CPU コア"]
+        C1["Core 1"]; C2["Core 2"]
+    end
+    G1 --> P1; G2 --> P1; G3 --> P1
+    G4 --> P2; G5 --> P2; G6 --> P2
+    P1 --> M1; P2 --> M2
+    M1 --> C1; M2 --> C2
+```
+
+この構造が、前ターンで触れた挙動を生む。**CPU バウンド**な G は P の数（= GOMAXPROCS）までしか同時に走れない——だから [[CPUバウンドとI-Oバウンド]] で述べた「CPU バウンドのワーカー数 ≒ GOMAXPROCS」が導かれる。一方 **I/O バウンド**な G がブロッキング I/O に入ると、ランタイムの **netpoller** がその G を P から外して待機させ、空いた P で別の G を走らせる（さらにシステムコールで M が長く塞がる場合は、ランタイムが新しい M を起こして P を引き継がせ、他の G を止めない）。**「待ち」を自動でオーバーラップさせる**この仕組みのおかげで、Go では `async/await` のような色分けなしに I/O 並行を書ける。
+
 ### Channel — 型付きメッセージパッシング
 
 ```go
@@ -314,7 +345,7 @@ for r := range results {
 }
 ```
 
-これが Goroutine + Channel の真骨頂。Java/Python の Thread + Lock では遥かに複雑になる。
+これが Goroutine + Channel の真骨頂。Java/Python の Thread + Lock では遥かに複雑になる。なお **Worker Pool のワーカー数（上の `numWorkers`）の決め方は、処理が CPU バウンドか I/O バウンドかで正反対になる**——CPU バウンドなら ≒ GOMAXPROCS（コア数）、I/O バウンドなら待ちを重ねるためもっと多く。この判断軸は [[CPUバウンドとI-Oバウンド]] を参照。
 
 ### Context — キャンセル伝播の標準
 
@@ -654,20 +685,27 @@ if cfg, err := parseConfig(data); err != nil { // 新しい err を作ってい�
 fmt.Println(err)
 ```
 
-`go vet -shadow` で検出可能。
+shadow アナライザ（`golang.org/x/tools` 提供）で検出可能。かつて使えた `go vet -shadow` フラグは Go 1.12 で `go vet` から削除されており、現在は別ツールとして導入して渡す:
+
+```bash
+go install golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@latest
+go vet -vettool=$(which shadow) ./...
+```
 
 ### 7. デフォルトの GOMAXPROCS が cgroup を無視（〜 1.24）
 
 ```go
-// 旧来: コンテナで CPU 制限していても、ノード全体の CPU 数を見ていた
-runtime.NumCPU() // 例: 物理ホストが 64コアだと 64 が返る
-// → 不要な goroutine 過剰スケジューリング
+// 旧来（〜1.24）: コンテナで CPU 制限していても、GOMAXPROCS はホスト全体の CPU 数だった
+runtime.NumCPU()      // ホストが 64コアなら 64（これは現在も同じ＝ホストの論理CPU数）
+runtime.GOMAXPROCS(0) // 〜1.24 ではホスト基準の 64 → 不要な goroutine 過剰スケジューリング
 
-// Go 1.25+ — container-aware GOMAXPROCS（cgroup を見る）
-runtime.NumCPU() // コンテナの cpu limit に応じた値
+// Go 1.25+ — GOMAXPROCS のデフォルトが cgroup の CPU limit を考慮（Linux のみ）
+runtime.NumCPU()      // 変わらず 64 を返す（ホストの論理CPU数。cgroup 対応化されていない）
+runtime.GOMAXPROCS(0) // cgroup の cpu limit が 2コア相当なら 2 を採用（= min(NumCPU, limit)）
+// ※ GOMAXPROCS を明示設定するとこの自動調整は無効
 ```
 
-Kubernetes 環境で重要な改善。
+cgroup 対応化されたのは **`GOMAXPROCS` のデフォルト**であって `NumCPU()` ではない点に注意。Kubernetes 環境で重要な改善で、CPU バウンドな並列処理のワーカー数設計に直結する（→ [[CPUバウンドとI-Oバウンド]]）。
 
 ## AIによる実装のアンチパターン
 
@@ -689,6 +727,7 @@ Kubernetes 環境で重要な改善。
 - [[プログラミング言語の系譜と選択]] — 親トピック
 - [[Goのポインタ]] — Go のポインタ詳細
 - [[並行性の基本概念]] — Goroutine + Channel の理論的背景（CSP）
+- [[CPUバウンドとI-Oバウンド]] — Worker Pool のサイズ・GOMAXPROCS 設計の判断軸。Go の netpoller/M:Nスケジューラがこの分類でどう振る舞うか
 - [[ロック]] / [[セマフォとミューテックスの比較]] — 並行制御の基礎
 - [[インターフェース]] — Go の構造的interfaceの位置づけ
 - [[ジェネリクス]] — Go 1.18+ の Generics
