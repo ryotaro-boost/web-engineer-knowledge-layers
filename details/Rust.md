@@ -460,7 +460,7 @@ pub fn fibonacci(n: u32) -> u32 {
 }
 ```
 
-Rust は **Wasm の事実上の第一級言語**。Figma の重い計算処理、Photoshop on Web、Photopea などが Rust + Wasm で実装されている。
+Rust は **ゼロから書く新規 Wasm コードの事実上の第一級言語**。GC を持たず小さく速いバイナリになり、wasm-bindgen / wasm-pack の整備で JS との連携も滑らかなため、Cloudflare Workers のエッジ関数や npm 向けの高速ライブラリ（画像処理・暗号・パーサ等）で広く使われる。なお Figma や Photoshop on Web のような既存の巨大アプリは **C++ コードベースを Emscripten で Wasm 化**したもので Rust ではない点に注意（「Wasm = Rust」と短絡しない）。詳細は [[WebAssembly]] を参照。
 
 ### Cloudflare Workers
 
