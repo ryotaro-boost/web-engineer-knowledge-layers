@@ -252,6 +252,7 @@ if errors.Is(err, gorm.ErrRecordNotFound) {
 
 - [[Go]] — 親トピック。構造体タグ・`errors.Is`・ポインタ渡しの前提
 - [[Echo]] — GORM を呼び出す側のウェブフレームワーク（ハンドラ → GORM のデータ層）
+- [[Goの環境構築とツールチェーン]] — ドライバ依存の追加（`go get`/`go mod tidy`）やテスト実行の `go` コマンド一式
 - [[データアクセス層]] — ORM か生 SQL か、層の設計判断
 - [[EagerロードとLazyロード]] — Preload / Lazy の選び分け（N+1 の根）
 - [[トランザクション]] — `db.Transaction` の背景理論

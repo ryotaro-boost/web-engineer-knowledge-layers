@@ -526,7 +526,7 @@ go mod tidy   # 依存関係整理
 go work       # マルチモジュール（モノレポ）
 ```
 
-**すべて標準ツール**。Linter（`staticcheck`）と Test ヘルパー（`testify`）以外、サードパーティに頼らないでも開発できる。
+**すべて標準ツール**。Linter（`staticcheck`）と Test ヘルパー（`testify`）以外、サードパーティに頼らないでも開発できる。環境変数（`GOPATH`/`GOPROXY`/`GOPRIVATE`）・バージョン管理（`toolchain` ディレクティブ）・テストフラグ（`-race`/`-cover`）・クロスコンパイル（`GOOS`/`GOARCH`）まで含めたプロジェクト参画向けの実務まとめは[[Goの環境構築とツールチェーン]]を参照。
 
 ### 主要 Web フレームワーク
 
