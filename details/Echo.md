@@ -268,7 +268,7 @@ e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 `DefaultBinder.Bind` は **①パスパラメータ → ②クエリ（GET / DELETE / HEAD のみ）→ ③ボディ** の順でバインドする。注意点が2つ。
 
 - **パスパラメータはバインドされるが、構造体に `param:"id"` タグが要る**。タグがなければ `:id` は空のまま（「Bind したのに ID が空」の正体はタグ忘れ）。`c.Param("id")` で個別に取る手もある。
-- **POST / PUT ではクエリ文字列はバインドされない**。ボディとクエリで同名フィールドが衝突したときの優先順位の混乱を避けるための仕様（Echo issue #1670、v4.1.11 以降）。`?foo=bar` を POST で受けたいなら `c.QueryParam("foo")` で明示的に取る。
+- **POST / PUT ではクエリ文字列はバインドされない**。ボディとクエリで同名フィールドが衝突したときの優先順位の混乱を避けるための仕様（Echo 'issue #1670'、v4.1.11 以降）。`?foo=bar` を POST で受けたいなら `c.QueryParam("foo")` で明示的に取る。
 
 ```go
 type CreateReq struct {
